@@ -1,12 +1,14 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "naming_series:",
  "creation": "2026-06-17 15:47:46.659689",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "unit_category",
   "unit_type",
+  "unit_category",
+  "naming_series",
   "column_break_gccv",
   "area_sqft",
   "length_ft",
@@ -22,7 +24,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Unit Type",
-   "options": "Apartment\nShop\nGym",
+   "options": "\nApartment\nShop\nGym",
    "reqd": 1
   },
   {
@@ -70,15 +72,22 @@
   {
    "fieldname": "section_break_s8co",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Template ID"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-22 14:33:33.573447",
+ "modified": "2026-06-23 14:11:34.007003",
  "modified_by": "Administrator",
  "module": "pms",
  "name": "Unit Template",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
