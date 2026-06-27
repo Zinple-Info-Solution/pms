@@ -40,7 +40,6 @@ class Building(Document):
                     room.width_ft = row.width_ft
                     room.bathrooms = row.bathrooms
                     room.monthly_rent = row.monthly_rent
-                    room.occupied_by = row.occupied_by
                     room.building_unit_row = row.name
                     room.insert(ignore_permissions=True)
 

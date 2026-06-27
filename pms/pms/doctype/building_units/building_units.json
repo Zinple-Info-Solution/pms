@@ -14,7 +14,6 @@
   "length_ft",
   "width_ft",
   "section_break_ifgd",
-  "occupied_by",
   "bedrooms",
   "bathrooms",
   "monthly_rent",
@@ -86,12 +85,6 @@
    "options": "Building"
   },
   {
-   "fieldname": "occupied_by",
-   "fieldtype": "Link",
-   "label": "Occupied By",
-   "options": "Customer"
-  },
-  {
    "fieldname": "unit_category",
    "fieldtype": "Link",
    "label": "Unit Category",
@@ -113,7 +106,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-23 15:33:09.957856",
+ "modified": "2026-06-26 14:17:06.879095",
  "modified_by": "Administrator",
  "module": "pms",
  "name": "Building Units",
