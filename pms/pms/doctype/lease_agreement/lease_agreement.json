@@ -1,12 +1,14 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "naming_series:",
  "creation": "2026-06-23 15:05:43.272223",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "tenant",
   "building",
+  "naming_series",
   "column_break_dwnm",
   "floor",
   "start_date",
@@ -23,14 +25,18 @@
   {
    "fieldname": "tenant",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Tenant",
-   "options": "Customer"
+   "options": "Customer",
+   "reqd": 1
   },
   {
    "fieldname": "building",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Building",
-   "options": "Building"
+   "options": "Building",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_dwnm",
@@ -90,16 +96,23 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "series",
+   "options": "LA-.YYYY.-.MM.-.####"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-06-23 15:27:57.106738",
+ "modified": "2026-06-27 07:24:20.123254",
  "modified_by": "Administrator",
  "module": "pms",
  "name": "Lease Agreement",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
