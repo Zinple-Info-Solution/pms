@@ -114,7 +114,7 @@
   },
   {
    "fieldname": "based_on_by_unit",
-   "fieldtype": "Select",
+   "fieldtype": "Check",
    "label": "Based On By Unit"
   }
  ],
