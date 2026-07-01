@@ -7,12 +7,14 @@
  "engine": "InnoDB",
  "field_order": [
   "tenant",
+  "address",
   "building",
   "naming_series",
   "column_break_dwnm",
   "floor",
   "start_date",
   "end_date",
+  "based_on_by_unit",
   "section_break_ddil",
   "units",
   "section_break_shnd",
@@ -62,6 +64,7 @@
    "fieldtype": "Section Break"
   },
   {
+   "depends_on": "eval: doc.based_on_by_unit == 1",
    "fieldname": "units",
    "fieldtype": "Table",
    "label": "Units",
@@ -102,13 +105,24 @@
    "fieldtype": "Select",
    "label": "series",
    "options": "LA-.YYYY.-.MM.-.####"
+  },
+  {
+   "fieldname": "address",
+   "fieldtype": "Link",
+   "label": "Address",
+   "options": "Address"
+  },
+  {
+   "fieldname": "based_on_by_unit",
+   "fieldtype": "Select",
+   "label": "Based On By Unit"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-06-27 07:24:20.123254",
+ "modified": "2026-06-29 13:55:00.030378",
  "modified_by": "Administrator",
  "module": "pms",
  "name": "Lease Agreement",
