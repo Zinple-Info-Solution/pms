@@ -1,0 +1,52 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-07-10 14:24:37.577740",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_3fqz",
+  "facilities",
+  "value"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_3fqz",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "facilities",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Facilities",
+   "options": "Property Facility"
+  },
+  {
+   "default": "0",
+   "fieldname": "value",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Value"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-10 15:13:20.668898",
+ "modified_by": "Administrator",
+ "module": "pms",
+ "name": "Property Facilities",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

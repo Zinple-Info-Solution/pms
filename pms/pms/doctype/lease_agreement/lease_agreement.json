@@ -7,19 +7,37 @@
  "engine": "InnoDB",
  "field_order": [
   "tenant",
+  "customer",
   "address",
   "building",
-  "naming_series",
+  "lease_based_on",
+  "start_date",
   "column_break_dwnm",
   "floor",
-  "start_date",
-  "end_date",
   "based_on_by_unit",
-  "section_break_ddil",
+  "naming_series",
+  "billing_frequency",
+  "billing_based_on",
+  "end_date",
+  "section_break_vypb",
   "units",
+  "section_charges",
+  "additional_charges",
+  "section_discount",
+  "discount_type",
+  "discount_value",
+  "column_break_disc",
+  "discount_per_month",
   "section_break_shnd",
   "rent_amount",
   "security_deposit",
+  "column_break_totals",
+  "total_rent",
+  "monthly_charges",
+  "one_time_charges",
+  "net_monthly_amount",
+  "section_schedule",
+  "rent_schedule",
   "status",
   "amended_from"
  ],
@@ -29,8 +47,16 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Tenant",
-   "options": "Customer",
+   "options": "Tenant",
    "reqd": 1
+  },
+  {
+   "fetch_from": "tenant.customer",
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer",
+   "read_only": 1
   },
   {
    "fieldname": "building",
@@ -50,43 +76,120 @@
    "label": "Floor"
   },
   {
-   "fieldname": "start_date",
-   "fieldtype": "Date",
-   "label": "Start Date"
-  },
-  {
-   "fieldname": "end_date",
-   "fieldtype": "Date",
-   "label": "End Date"
-  },
-  {
-   "fieldname": "section_break_ddil",
-   "fieldtype": "Section Break"
-  },
-  {
-   "depends_on": "eval: doc.based_on_by_unit == 1",
-   "fieldname": "units",
-   "fieldtype": "Table",
-   "label": "Units",
-   "options": "Units"
+   "default": "Monthly",
+   "fieldname": "billing_frequency",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Billing Frequency",
+   "options": "Monthly\nQuarterly\nHalf-Yearly\nYearly",
+   "reqd": 1
   },
   {
    "fieldname": "section_break_shnd",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Amounts"
   },
   {
+   "description": "Leave 0 to auto-calculate from units",
    "fieldname": "rent_amount",
-   "fieldtype": "Data",
-   "label": "Rent Amount"
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Rent Amount (Monthly)"
   },
   {
    "fieldname": "security_deposit",
-   "fieldtype": "Data",
+   "fieldtype": "Currency",
    "label": "Security Deposit"
+  },
+  {
+   "fieldname": "column_break_totals",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Sum of monthly rent of all units",
+   "fieldname": "total_rent",
+   "fieldtype": "Currency",
+   "label": "Total Monthly Rent",
+   "read_only": 1
+  },
+  {
+   "fieldname": "monthly_charges",
+   "fieldtype": "Currency",
+   "label": "Recurring Charges / Month",
+   "read_only": 1
+  },
+  {
+   "fieldname": "one_time_charges",
+   "fieldtype": "Currency",
+   "label": "One Time Charges",
+   "read_only": 1
+  },
+  {
+   "description": "Rent + recurring charges - discount",
+   "fieldname": "net_monthly_amount",
+   "fieldtype": "Currency",
+   "label": "Net Monthly Amount",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_charges",
+   "fieldtype": "Section Break",
+   "label": "Additional Charges"
+  },
+  {
+   "fieldname": "additional_charges",
+   "fieldtype": "Table",
+   "label": "Additional Charges",
+   "options": "Lease Additional Charge"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_discount",
+   "fieldtype": "Section Break",
+   "label": "Discount"
+  },
+  {
+   "fieldname": "discount_type",
+   "fieldtype": "Select",
+   "label": "Discount Type",
+   "options": "\nPercentage\nAmount"
+  },
+  {
+   "depends_on": "discount_type",
+   "description": "Percentage of monthly rent, or fixed amount per month",
+   "fieldname": "discount_value",
+   "fieldtype": "Float",
+   "label": "Discount Value"
+  },
+  {
+   "fieldname": "column_break_disc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "discount_per_month",
+   "fieldtype": "Currency",
+   "label": "Discount / Month",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_schedule",
+   "fieldtype": "Section Break",
+   "label": "Rent Collection Schedule"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "rent_schedule",
+   "fieldtype": "Table",
+   "label": "Rent Schedule",
+   "options": "Rent Schedule",
+   "read_only": 1
   },
   {
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Status",
    "options": "\nActive\nExpired\nTerminated"
   },
@@ -113,16 +216,55 @@
    "options": "Address"
   },
   {
+   "default": "0",
    "fieldname": "based_on_by_unit",
    "fieldtype": "Check",
    "label": "Based On By Unit"
+  },
+  {
+   "fieldname": "section_break_vypb",
+   "fieldtype": "Section Break"
+  },
+  {
+   "depends_on": "eval: doc.based_on_by_unit == 1",
+   "fieldname": "units",
+   "fieldtype": "Table",
+   "label": "Units",
+   "options": "Lease Agreement Unit"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Start Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "label": "End Date",
+   "reqd": 1
+  },
+  {
+   "description": "Whole Building auto-adds every vacant unit of the building",
+   "fieldname": "lease_based_on",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Lease Based On",
+   "options": "Whole Building\nSelected Units"
+  },
+  {
+   "description": "Asset Wise = one invoice line per unit. Building Wise = one consolidated line.",
+   "fieldname": "billing_based_on",
+   "fieldtype": "Select",
+   "label": "Billing Based On",
+   "options": "Building Wise\nAsset Wise"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-06-29 13:55:00.030378",
+ "modified": "2026-07-14 08:30:00.689450",
  "modified_by": "Administrator",
  "module": "pms",
  "name": "Lease Agreement",
@@ -130,6 +272,8 @@
  "owner": "Administrator",
  "permissions": [
   {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -139,6 +283,7 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "submit": 1,
    "write": 1
   }
  ],

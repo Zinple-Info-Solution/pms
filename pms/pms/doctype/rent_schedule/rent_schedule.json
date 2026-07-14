@@ -1,0 +1,32 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-07-13 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": ["due_date", "billing_period", "rent_amount", "charges_amount", "discount_amount", "total_amount", "status", "sales_invoice"],
+ "fields": [
+  {"fieldname": "due_date", "fieldtype": "Date", "in_list_view": 1, "label": "Due Date", "read_only": 1},
+  {"fieldname": "billing_period", "fieldtype": "Data", "in_list_view": 1, "label": "Billing Period", "read_only": 1},
+  {"fieldname": "rent_amount", "fieldtype": "Currency", "label": "Rent", "read_only": 1},
+  {"fieldname": "charges_amount", "fieldtype": "Currency", "label": "Charges", "read_only": 1},
+  {"fieldname": "discount_amount", "fieldtype": "Currency", "label": "Discount", "read_only": 1},
+  {"fieldname": "total_amount", "fieldtype": "Currency", "in_list_view": 1, "label": "Total", "read_only": 1},
+  {"allow_on_submit": 1, "default": "Pending", "fieldname": "status", "fieldtype": "Select", "in_list_view": 1, "label": "Status", "options": "Pending\nInvoiced\nPaid", "read_only": 1},
+  {"allow_on_submit": 1, "fieldname": "sales_invoice", "fieldtype": "Link", "in_list_view": 1, "label": "Sales Invoice", "no_copy": 1, "options": "Sales Invoice", "read_only": 1}
+ ],
+ "grid_page_length": 50,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-13 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "pms",
+ "name": "Rent Schedule",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
