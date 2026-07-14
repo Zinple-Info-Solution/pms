@@ -20,27 +20,19 @@
  ],
  "fields": [
   {
-   "fieldname": "unit_type",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Unit Type",
-   "options": "\nApartment\nShop\nGym",
-   "reqd": 1
-  },
-  {
    "fieldname": "area_sqft",
    "fieldtype": "Float",
-   "label": "Area (sq.ft)"
+   "label": "Area (sq.M)"
   },
   {
    "fieldname": "length_ft",
    "fieldtype": "Float",
-   "label": "Length (ft)"
+   "label": "Length (M)"
   },
   {
    "fieldname": "width_ft",
    "fieldtype": "Float",
-   "label": "Width (ft)"
+   "label": "Width (M)"
   },
   {
    "fieldname": "bedrooms",
@@ -78,12 +70,18 @@
    "fieldtype": "Data",
    "hidden": 1,
    "label": "Template ID"
+  },
+  {
+   "fieldname": "unit_type",
+   "fieldtype": "Link",
+   "label": "Unit Type",
+   "options": "Unit Type"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-23 14:11:34.007003",
+ "modified": "2026-07-04 11:16:33.928530",
  "modified_by": "Administrator",
  "module": "pms",
  "name": "Unit Template",

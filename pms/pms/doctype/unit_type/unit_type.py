@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class BuildingUnits(Document):
+class UnitType(Document):
 	pass
