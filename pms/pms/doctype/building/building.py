@@ -6,7 +6,6 @@ from frappe.model.document import Document
 class Building(Document):
 
     def on_update(self):
-        self.ensure_asset_categories_exist()
         self.ensure_location_exists()
         self.sync_units()
 
@@ -29,83 +28,71 @@ class Building(Document):
                 frappe.db.commit()
                 frappe.msgprint(
                     f"✅ Item <b>{item_code}</b> created automatically.",
-                    indicator="green",
-                    alert=True
+                    indicator="green", alert=True
                 )
             except Exception as e:
-                frappe.log_error(str(e), f"Item Creation Error: {item_code}")
+                frappe.log_error(str(e), f"PMS Item Creation Error: {item_code}")
 
         return item_code
 
-    def ensure_asset_categories_exist(self):
-        """Make sure Asset Categories exist"""
-        for category in ["Residential", "Commercial", "Mixed Use"]:
-            if not frappe.db.exists("Asset Category", category):
-                cat = frappe.get_doc({
+    def ensure_asset_category_exists(self, category):
+        """Make sure a single Asset Category exists"""
+        if not category:
+            return
+        if not frappe.db.exists("Asset Category", category):
+            try:
+                frappe.get_doc({
                     "doctype"                 : "Asset Category",
                     "asset_category_name"     : category,
                     "enable_cwip_accounting"  : 0,
                     "non_depreciable_category": 1,
-                })
-                try:
-                    cat.insert(ignore_permissions=True)
-                    frappe.db.commit()
-                except Exception as e:
-                    frappe.log_error(str(e), "Asset Category Creation Error")
+                }).insert(ignore_permissions=True)
+                frappe.db.commit()
+            except Exception as e:
+                frappe.log_error(str(e), f"PMS Asset Category Error: {category}")
 
     def ensure_location_exists(self):
         """Create a Location for this Building if not exists"""
         if not frappe.db.exists("Location", self.building_name):
-            loc = frappe.get_doc({
-                "doctype"       : "Location",
-                "location_name" : self.building_name,
-            })
             try:
-                loc.insert(ignore_permissions=True)
+                frappe.get_doc({
+                    "doctype"       : "Location",
+                    "location_name" : self.building_name,
+                }).insert(ignore_permissions=True)
                 frappe.db.commit()
             except Exception as e:
-                frappe.log_error(str(e), "Location Creation Error")
+                frappe.log_error(str(e), "PMS Location Creation Error")
 
     def sync_units(self):
-        asset_category_map = {
-            "Apartment" : "Residential",
-            "Villa"     : "Residential",
-            "Shop"      : "Commercial",
-            "Office"    : "Commercial",
-            "Gym"       : "Mixed Use",
-            "Parking"   : "Commercial",
-            "Warehouse" : "Commercial",
-        }
-
         company = (
             frappe.defaults.get_user_default("Company") or
             frappe.db.get_single_value("Global Defaults", "default_company")
         )
 
-        rows = self.get("units") or []
+        rows        = self.get("units") or []
         total_created = 0
 
         for row in rows:
-            required  = row.unit_no or 0
-            unit_type = row.unit_type or "Apartment"
-            asset_category = asset_category_map.get(unit_type, "Residential")
+            required       = row.unit_no or 0
+            unit_type      = row.unit_type or "Apartment"
 
-            # Ensure item exists for this unit type
+            # ✅ Get asset_category from child table row directly
+            asset_category = row.get("asset_category") or "Residential"
+
+            # Ensure Asset Category exists
+            self.ensure_asset_category_exists(asset_category)
+
+            # Ensure Item exists for this unit type + category
             item_code = self.ensure_item_for_unit_type(unit_type, asset_category)
 
-            # ✅ Count existing assets per row (not whole building)
+            # Count existing assets per row only
             existing = frappe.db.count(
                 "Asset",
                 filters={
                     "custom_building"          : self.name,
-                    "custom_building_unit_row" : row.name,  # ✅ per row
+                    "custom_building_unit_row" : row.name,
                     "custom_created_by_pms"    : 1
                 }
-            )
-
-            frappe.log_error(
-                f"Row {row.idx} ({unit_type}): required={required}, existing={existing}",
-                "PMS Sync Debug"
             )
 
             if existing < required:
@@ -116,31 +103,32 @@ class Building(Document):
                     asset_name  = f"{self.building_name} - {unit_type} - {unit_number}"
 
                     asset = frappe.get_doc({
-                        "doctype"                : "Asset",
-                        "item_code"              : item_code,
-                        "asset_name"             : asset_name,
-                        "asset_category"         : asset_category,
-                        "company"                : company,
-                        "purchase_date"          : frappe.utils.today(),
-                        "available_for_use_date" : frappe.utils.today(),
-                        "location"               : self.building_name,
-                        "gross_purchase_amount"  : (row.monthly_rent or 0) * 12,
-                        "calculate_depreciation" : 0,
-                        "is_existing_asset"      : 1,
+                        "doctype"                 : "Asset",
+                        "item_code"               : item_code,
+                        "asset_name"              : asset_name,
+                        "asset_category"          : asset_category,  # ✅ from child table
+                        "company"                 : company,
+                        "purchase_date"           : frappe.utils.today(),
+                        "available_for_use_date"  : frappe.utils.today(),
+                        "location"                : self.building_name,
+                        "gross_purchase_amount"   : (row.monthly_rent or 0) * 12,
+                        "calculate_depreciation"  : 0,
+                        "is_existing_asset"       : 1,
                         # PMS custom fields
-                        "custom_created_by_pms"  : 1,
-                        "custom_occupancy_status": "Vacent",
-                        "custom_building"        : self.name,
-                        "custom_property_name"   : self.building_name,
-                        "custom_unit_type"       : unit_type,
-                        "custom_unit_category"   : row.unit_category,
-                        "custom_area_sqft"       : row.area_sqft or 0,
-                        "custom_length_ft"       : row.length_ft or 0,
-                        "custom_width_ft"        : row.width_ft or 0,
-                        "custom_bathrooms"       : row.bathrooms or 0,
-                        "custom_monthly_rent"    : row.monthly_rent or 0,
-                        "custom_building_unit_row": row.name,  # ✅ link to row
-                        "custom_floor_no"        : row.get("floor_no") or 0,
+                        "custom_created_by_pms"   : 1,
+                        "custom_occupancy_status" : "Vacent",
+                        "custom_building"         : self.name,
+                        "custom_property_name"    : self.building_name,
+                        "custom_unit_type"        : unit_type,
+                        "custom_unit_category"    : row.unit_category,
+                        "custom_asset_category"   : asset_category,  # ✅ store in asset too
+                        "custom_area_sqft"        : row.area_sqft or 0,
+                        "custom_length_ft"        : row.length_ft or 0,
+                        "custom_width_ft"         : row.width_ft or 0,
+                        "custom_bathrooms"        : row.bathrooms or 0,
+                        "custom_monthly_rent"     : row.monthly_rent or 0,
+                        "custom_building_unit_row": row.name,
+                        "custom_floor_no"         : row.get("floor_no") or 0,
                     })
 
                     try:
@@ -156,20 +144,17 @@ class Building(Document):
                 frappe.msgprint(
                     f"Row {row.idx} ({unit_type}): count reduced. "
                     f"{existing - required} existing Asset(s) left untouched.",
-                    indicator="orange",
-                    alert=True
+                    indicator="orange", alert=True
                 )
 
-            elif existing == required:
+            elif existing == required and required > 0:
                 frappe.msgprint(
                     f"Row {row.idx} ({unit_type}): already has {existing} asset(s). No changes.",
-                    indicator="blue",
-                    alert=True
+                    indicator="blue", alert=True
                 )
 
         frappe.db.commit()
         frappe.msgprint(
             f"✅ Assets synced for <b>{self.building_name}</b> — {total_created} new asset(s) created.",
-            indicator="green",
-            alert=True
+            indicator="green", alert=True
         )
