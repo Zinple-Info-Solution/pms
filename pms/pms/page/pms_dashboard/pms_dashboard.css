@@ -1,0 +1,437 @@
+/* ==========================================================================
+   PMS  ·  Financial dashboard  ·  /app/pms-dashboard
+   Scoped entirely under .pms-fin so nothing leaks into the rest of the desk.
+   Colours resolve through Frappe's own theme variables where they exist, so
+   the page follows light / dark mode automatically.
+   ========================================================================== */
+
+.pms-fin {
+	--fin-green: #16a34a;
+	--fin-green-dark: #166534;
+	--fin-green-soft: rgba(22, 163, 74, 0.12);
+	--fin-amber: #f59e0b;
+	--fin-red: #ef4444;
+	--fin-blue: #3182ce;
+	--fin-violet: #8b5cf6;
+
+	--fin-card: var(--card-bg, #ffffff);
+	--fin-line: var(--border-color, #e8ecea);
+	--fin-ink: var(--text-color, #12281f);
+	--fin-mute: var(--text-muted, #6b7f75);
+	--fin-track: var(--control-bg, #f3f6f4);
+
+	--fin-radius: 12px;
+	--fin-gap: 14px;
+
+	color: var(--fin-ink);
+	font-variant-numeric: tabular-nums;
+}
+
+.pms-fin * {
+	box-sizing: border-box;
+}
+
+/* ---------- toolbar: tabs + period + export -------------------------- */
+.pms-fin .fin-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin-bottom: var(--fin-gap);
+}
+
+.pms-fin .fin-tab {
+	border: 0;
+	background: transparent;
+	color: var(--fin-mute);
+	font-size: var(--text-md, 13px);
+	font-weight: 500;
+	padding: 6px 14px;
+	border-radius: 8px;
+	cursor: pointer;
+}
+
+.pms-fin .fin-tab:hover {
+	background: var(--fin-track);
+	color: var(--fin-ink);
+}
+
+.pms-fin .fin-tab.is-active {
+	background: var(--fin-green-soft);
+	color: var(--fin-green-dark);
+}
+
+.pms-fin .fin-toolbar .fin-spacer {
+	margin-left: auto;
+}
+
+.pms-fin .fin-asof {
+	font-size: var(--text-sm, 12px);
+	color: var(--fin-mute);
+}
+
+/* ---------- KPI cards ------------------------------------------------- */
+.pms-fin .fin-kpis {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: var(--fin-gap);
+	margin-bottom: var(--fin-gap);
+}
+
+.pms-fin .fin-kpi {
+	background: var(--fin-card);
+	border: 1px solid var(--fin-line);
+	border-radius: var(--fin-radius);
+	padding: 16px 18px;
+	text-decoration: none;
+	color: inherit;
+	display: block;
+	transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.pms-fin a.fin-kpi:hover {
+	border-color: var(--fin-green);
+	transform: translateY(-1px);
+	color: inherit;
+}
+
+.pms-fin .fin-kpi-head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.pms-fin .fin-kpi-label {
+	font-size: var(--text-sm, 12px);
+	color: var(--fin-mute);
+	line-height: 1.35;
+}
+
+.pms-fin .fin-kpi-icon {
+	height: 28px;
+	width: 28px;
+	flex: 0 0 28px;
+	border-radius: 8px;
+	background: var(--fin-track);
+	color: var(--fin-mute);
+	display: grid;
+	place-items: center;
+}
+
+.pms-fin .fin-kpi-icon svg {
+	height: 15px;
+	width: 15px;
+}
+
+.pms-fin .fin-kpi-value {
+	margin-top: 10px;
+	font-size: 26px;
+	font-weight: 700;
+	letter-spacing: -0.01em;
+	line-height: 1.15;
+	word-break: break-word;
+}
+
+.pms-fin .fin-kpi-foot {
+	margin-top: 6px;
+	font-size: var(--text-sm, 12px);
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	flex-wrap: wrap;
+}
+
+.pms-fin .fin-kpi-foot .fin-note {
+	color: var(--fin-mute);
+	font-weight: 400;
+}
+
+.pms-fin .fin-up {
+	color: var(--fin-green);
+}
+
+.pms-fin .fin-down {
+	color: var(--fin-red);
+}
+
+/* ---------- panels ---------------------------------------------------- */
+.pms-fin .fin-row {
+	display: grid;
+	gap: var(--fin-gap);
+	margin-bottom: var(--fin-gap);
+}
+
+.pms-fin .fin-row.fin-split {
+	grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+
+.pms-fin .fin-row.fin-quad {
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pms-fin .fin-panel {
+	background: var(--fin-card);
+	border: 1px solid var(--fin-line);
+	border-radius: var(--fin-radius);
+	padding: 18px;
+	min-width: 0;
+}
+
+.pms-fin .fin-panel-head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 4px;
+}
+
+.pms-fin .fin-panel-title {
+	margin: 0;
+	font-size: var(--text-md, 14px);
+	font-weight: 600;
+}
+
+.pms-fin .fin-legend {
+	display: flex;
+	gap: 14px;
+	flex-wrap: wrap;
+	font-size: var(--text-sm, 12px);
+	color: var(--fin-mute);
+	margin-top: 6px;
+}
+
+.pms-fin .fin-legend span {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.pms-fin .fin-dot {
+	height: 8px;
+	width: 8px;
+	border-radius: 99px;
+	display: inline-block;
+	flex: 0 0 8px;
+}
+
+.pms-fin .fin-chart {
+	width: 100%;
+	display: block;
+	overflow: visible;
+}
+
+.pms-fin .fin-chart text {
+	fill: var(--fin-mute);
+	font-size: 11px;
+	font-family: inherit;
+}
+
+.pms-fin .fin-chart .fin-grid line {
+	stroke: var(--fin-line);
+	stroke-width: 1;
+}
+
+.pms-fin .fin-chart .fin-zero {
+	stroke: var(--fin-mute);
+	stroke-opacity: 0.4;
+	stroke-dasharray: 3 3;
+}
+
+/* ---------- donut ----------------------------------------------------- */
+.pms-fin .fin-donut-wrap {
+	position: relative;
+}
+
+.pms-fin .fin-donut-centre {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	text-align: center;
+	pointer-events: none;
+}
+
+.pms-fin .fin-donut-centre .fin-c-label {
+	font-size: var(--text-sm, 11px);
+	color: var(--fin-mute);
+}
+
+.pms-fin .fin-donut-centre .fin-c-value {
+	font-size: 19px;
+	font-weight: 700;
+}
+
+.pms-fin .fin-breakdown {
+	margin-top: 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 9px;
+}
+
+.pms-fin .fin-breakdown-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: var(--text-md, 13px);
+}
+
+.pms-fin .fin-breakdown-row .fin-b-name {
+	color: var(--fin-mute);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.pms-fin .fin-breakdown-row .fin-b-amount {
+	margin-left: auto;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.pms-fin .fin-breakdown-row .fin-b-pct {
+	width: 40px;
+	text-align: right;
+	font-size: var(--text-sm, 12px);
+	color: var(--fin-mute);
+}
+
+/* ---------- portfolio tiles ------------------------------------------ */
+.pms-fin .fin-tile {
+	background: var(--fin-card);
+	border: 1px solid var(--fin-line);
+	border-radius: var(--fin-radius);
+	padding: 16px 18px;
+	text-decoration: none;
+	color: inherit;
+	display: block;
+}
+
+.pms-fin a.fin-tile:hover {
+	border-color: var(--fin-green);
+	color: inherit;
+}
+
+.pms-fin .fin-tile-label {
+	font-size: var(--text-sm, 12px);
+	color: var(--fin-mute);
+}
+
+.pms-fin .fin-tile-value {
+	margin-top: 6px;
+	font-size: 22px;
+	font-weight: 700;
+}
+
+.pms-fin .fin-tile-note {
+	font-size: var(--text-sm, 12px);
+	color: var(--fin-mute);
+	margin-top: 3px;
+}
+
+.pms-fin .fin-tile.fin-tile-occ {
+	background: linear-gradient(160deg, var(--fin-green-dark), var(--fin-green));
+	border-color: transparent;
+	color: #fff;
+}
+
+.pms-fin .fin-tile.fin-tile-occ .fin-tile-label,
+.pms-fin .fin-tile.fin-tile-occ .fin-tile-note {
+	color: rgba(255, 255, 255, 0.82);
+}
+
+.pms-fin .fin-track {
+	height: 6px;
+	border-radius: 99px;
+	background: rgba(255, 255, 255, 0.28);
+	margin: 10px 0 6px;
+	overflow: hidden;
+}
+
+.pms-fin .fin-track-fill {
+	height: 100%;
+	border-radius: 99px;
+	background: #fff;
+	width: 0;
+	transition: width 0.7s ease;
+}
+
+/* ---------- tooltip --------------------------------------------------- */
+.pms-fin-tip {
+	position: fixed;
+	z-index: 1060;
+	pointer-events: none;
+	background: var(--card-bg, #fff);
+	color: var(--text-color, #12281f);
+	border: 1px solid var(--border-color, #e8ecea);
+	border-radius: 10px;
+	padding: 8px 10px;
+	font-size: 12px;
+	box-shadow: var(--shadow-lg, 0 8px 24px rgba(15, 47, 34, 0.14));
+	opacity: 0;
+	transition: opacity 0.1s ease;
+	max-width: 240px;
+}
+
+.pms-fin-tip b {
+	display: block;
+	margin-bottom: 4px;
+}
+
+.pms-fin-tip .fin-tip-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--text-muted, #6b7f75);
+}
+
+.pms-fin-tip .fin-tip-row .fin-tip-amount {
+	margin-left: auto;
+	font-weight: 600;
+	color: var(--text-color, #12281f);
+}
+
+/* ---------- empty / loading ------------------------------------------ */
+.pms-fin .fin-empty {
+	display: grid;
+	place-items: center;
+	min-height: 120px;
+	text-align: center;
+	color: var(--fin-mute);
+	font-size: var(--text-md, 13px);
+	padding: 20px;
+}
+
+.pms-fin.is-loading {
+	opacity: 0.5;
+	pointer-events: none;
+}
+
+/* ---------- responsive ------------------------------------------------ */
+@media (max-width: 1200px) {
+	.pms-fin .fin-kpis,
+	.pms-fin .fin-row.fin-quad {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	.pms-fin .fin-row.fin-split {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+@media (max-width: 640px) {
+	.pms-fin .fin-kpis,
+	.pms-fin .fin-row.fin-quad {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.pms-fin .fin-kpi-value {
+		font-size: 22px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.pms-fin *,
+	.pms-fin-tip {
+		transition: none !important;
+	}
+}

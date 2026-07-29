@@ -1,0 +1,88 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-07-10 14:24:37.577740",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_3fqz",
+  "facilities",
+  "value",
+  "charge_type",
+  "amount",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_3fqz",
+   "fieldtype": "Section Break"
+  },
+  {
+   "columns": 3,
+   "fieldname": "facilities",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Facilities",
+   "options": "Property Facility"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "description": "Tick if this unit has the facility",
+   "fieldname": "value",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Available"
+  },
+  {
+   "columns": 2,
+   "default": "Recurring",
+   "depends_on": "eval:doc.value",
+   "fetch_from": "facilities.charge_type",
+   "fetch_if_empty": 1,
+   "fieldname": "charge_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Charge Type",
+   "options": "Recurring\nOne Time"
+  },
+  {
+   "columns": 2,
+   "depends_on": "eval:doc.value",
+   "description": "Extra amount charged in the Lease Agreement for this facility",
+   "fetch_from": "facilities.default_amount",
+   "fetch_if_empty": 1,
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount"
+  },
+  {
+   "columns": 2,
+   "fieldname": "remarks",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Remarks"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-22 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "pms",
+ "name": "Property Facilities",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

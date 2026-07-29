@@ -1,0 +1,23 @@
+{
+ "doctype": "Dashboard Chart",
+ "name": "PMS Rent Collection Trend",
+ "chart_name": "PMS Rent Collection Trend",
+ "module": "pms",
+ "chart_type": "Custom",
+ "source": "PMS Monthly Collected Rent",
+ "type": "Line",
+ "timeseries": 1,
+ "time_interval": "Monthly",
+ "timespan": "Last Year",
+ "is_public": 1,
+ "is_standard": 1,
+ "use_report_chart": 0,
+ "number_of_groups": 0,
+ "filters_json": "{}",
+ "custom_options": "{\"fieldtype\": \"Currency\", \"colors\": [\"#38a169\"], \"height\": 280}",
+ "color": "#38a169",
+ "docstatus": 0,
+ "idx": 0,
+ "y_axis": [],
+ "roles": []
+}

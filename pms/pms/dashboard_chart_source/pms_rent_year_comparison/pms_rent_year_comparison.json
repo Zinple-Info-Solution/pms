@@ -1,0 +1,9 @@
+{
+ "doctype": "Dashboard Chart Source",
+ "name": "PMS Rent Year Comparison",
+ "source_name": "PMS Rent Year Comparison",
+ "module": "pms",
+ "timeseries": 0,
+ "docstatus": 0,
+ "idx": 0
+}

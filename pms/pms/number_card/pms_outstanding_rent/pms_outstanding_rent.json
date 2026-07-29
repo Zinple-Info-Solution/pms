@@ -1,0 +1,18 @@
+{
+ "doctype": "Number Card",
+ "name": "PMS Outstanding Rent",
+ "label": "PMS Outstanding Rent",
+ "module": "pms",
+ "is_public": 1,
+ "is_standard": 1,
+ "show_percentage_stats": 0,
+ "stats_time_interval": "Monthly",
+ "filters_json": "[]",
+ "dynamic_filters_json": "",
+ "docstatus": 0,
+ "idx": 0,
+ "color": "#dd6b20",
+ "type": "Custom",
+ "method": "pms.pms.dashboard_data.rent_outstanding",
+ "document_type": "Sales Invoice"
+}

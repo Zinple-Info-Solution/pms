@@ -1,0 +1,43 @@
+{
+  "doctype": "Dashboard",
+  "name": "PMS Financial",
+  "dashboard_name": "PMS Financial",
+  "module": "pms",
+  "is_default": 0,
+  "is_standard": 1,
+  "chart_options": "{\"colors\":[\"#16a34a\",\"#f59e0b\",\"#3182ce\"]}",
+  "cards": [
+    {
+      "card": "PMS Rent Collected This Month"
+    },
+    {
+      "card": "PMS Outstanding Rent"
+    },
+    {
+      "card": "PMS Active Leases"
+    },
+    {
+      "card": "PMS Occupancy Rate"
+    }
+  ],
+  "charts": [
+    {
+      "chart": "PMS Rent Collection Trend",
+      "width": "Full"
+    },
+    {
+      "chart": "PMS Rent Year Comparison",
+      "width": "Full"
+    },
+    {
+      "chart": "PMS Lease Status",
+      "width": "Half"
+    },
+    {
+      "chart": "PMS Maintenance Status",
+      "width": "Half"
+    }
+  ],
+  "docstatus": 0,
+  "idx": 0
+}

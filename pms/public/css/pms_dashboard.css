@@ -1,0 +1,444 @@
+/* ================================================================
+   PMS FINANCIAL DASHBOARD
+   Frappe Native Dashboard
+   /app/dashboard-view/PMS Financial
+   ================================================================ */
+
+.dashboard-page {
+	--pms-green: #38a169;
+	--pms-green-dark: #276749;
+	--pms-green-soft: rgba(56, 161, 105, 0.10);
+
+	--pms-orange: #dd6b20;
+	--pms-blue: #3182ce;
+	--pms-red: #e53e3e;
+
+	--pms-bg: #f6f8f7;
+	--pms-card: #ffffff;
+	--pms-border: #e5ebe8;
+
+	--pms-text: #12281f;
+	--pms-muted: #6b7f75;
+
+	--pms-radius: 16px;
+
+	--pms-shadow:
+		0 1px 3px rgba(16, 40, 31, 0.06);
+
+	--pms-shadow-hover:
+		0 8px 24px rgba(16, 40, 31, 0.10);
+}
+
+
+/* ================================================================
+   PAGE
+   ================================================================ */
+
+.dashboard-page {
+	background: var(--pms-bg);
+}
+
+.dashboard-page .layout-main-section,
+.dashboard-page .dashboard-view {
+	max-width: 1280px;
+	margin: 0 auto;
+}
+
+
+/* ================================================================
+   HEADER
+   ================================================================ */
+
+.dashboard-page .dashboard-header {
+	margin-bottom: 18px;
+}
+
+.dashboard-page .dashboard-header h1,
+.dashboard-page .dashboard-header .title-text {
+	color: var(--pms-text) !important;
+	font-weight: 700 !important;
+}
+
+.dashboard-page .dashboard-header .sub-heading {
+	color: var(--pms-muted) !important;
+}
+
+
+/* ================================================================
+   WIDGET GROUP
+   ================================================================ */
+
+.dashboard-page .widget-group {
+	margin-bottom: 20px !important;
+}
+
+
+/* ================================================================
+   COMMON WIDGET
+   ================================================================ */
+
+.dashboard-page .widget.number-widget-box,
+.dashboard-page .widget.dashboard-widget-box {
+	background: var(--pms-card) !important;
+
+	border: 1px solid var(--pms-border) !important;
+
+	border-radius: var(--pms-radius) !important;
+
+	box-shadow: var(--pms-shadow) !important;
+
+	transition:
+		transform 0.18s ease,
+		box-shadow 0.18s ease;
+
+	overflow: hidden;
+}
+
+
+/* Hover */
+
+.dashboard-page .widget.number-widget-box:hover,
+.dashboard-page .widget.dashboard-widget-box:hover {
+	transform: translateY(-2px);
+
+	box-shadow: var(--pms-shadow-hover) !important;
+}
+
+
+/* ================================================================
+   NUMBER CARDS
+   ================================================================ */
+
+.dashboard-page .number-widget-box {
+	min-height: 125px;
+
+	position: relative;
+
+	padding: 20px 22px !important;
+}
+
+
+/* Green left accent */
+
+.dashboard-page .number-widget-box::before {
+	content: "";
+
+	position: absolute;
+
+	left: 0;
+	top: 15px;
+	bottom: 15px;
+
+	width: 4px;
+
+	background: var(--pms-green);
+
+	border-radius: 0 4px 4px 0;
+}
+
+
+/* Card title */
+
+.dashboard-page .number-widget-box .widget-title,
+.dashboard-page .number-widget-box .widget-title span {
+	color: var(--pms-muted) !important;
+
+	font-size: 13px !important;
+
+	font-weight: 500 !important;
+
+	letter-spacing: 0;
+
+	text-transform: none !important;
+}
+
+
+/* Main number */
+
+.dashboard-page
+.number-widget-box
+.widget-content
+.number {
+
+	font-size: 30px !important;
+
+	font-weight: 700 !important;
+
+	line-height: 1.15;
+
+	letter-spacing: -0.8px;
+
+	color: var(--pms-text) !important;
+
+	margin-top: 12px;
+}
+
+
+/* Statistics */
+
+.dashboard-page .number-widget-box .card-stats {
+	margin-top: 8px;
+
+	font-size: 11px;
+}
+
+
+/* Percentage */
+
+.dashboard-page
+.number-widget-box
+.percentage-stat-area {
+
+	color: var(--pms-muted) !important;
+
+	font-size: 11px !important;
+}
+
+
+/* ================================================================
+   CHART CARDS
+   ================================================================ */
+
+.dashboard-page .dashboard-widget-box {
+	padding: 20px !important;
+
+	min-height: 300px;
+}
+
+
+/* Chart title */
+
+.dashboard-page
+.dashboard-widget-box
+.widget-title,
+.dashboard-page
+.dashboard-widget-box
+.widget-title span {
+
+	color: var(--pms-text) !important;
+
+	font-size: 15px !important;
+
+	font-weight: 650 !important;
+}
+
+
+/* Chart header */
+
+.dashboard-page
+.dashboard-widget-box
+.widget-head {
+
+	margin-bottom: 12px;
+}
+
+
+/* ================================================================
+   FRAPPE CHART
+   ================================================================ */
+
+.dashboard-page
+.dashboard-widget-box
+.chart-container {
+
+	padding-top: 5px;
+}
+
+
+/* Axis text */
+
+.dashboard-page
+.dashboard-widget-box
+.chart-container text {
+
+	fill: var(--pms-muted) !important;
+
+	font-size: 11px !important;
+}
+
+
+/* Grid lines */
+
+.dashboard-page
+.dashboard-widget-box
+.frappe-chart
+.y.axis line,
+
+.dashboard-page
+.dashboard-widget-box
+.frappe-chart
+.x.axis line {
+
+	stroke: var(--pms-border) !important;
+}
+
+
+/* ================================================================
+   CHART TOOLTIP
+   ================================================================ */
+
+.dashboard-page
+.graph-svg-tip {
+
+	background: #ffffff !important;
+
+	border: 1px solid var(--pms-border) !important;
+
+	border-radius: 10px !important;
+
+	box-shadow:
+		0 8px 25px rgba(16, 40, 31, 0.12) !important;
+
+	color: var(--pms-text) !important;
+}
+
+
+/* ================================================================
+   LEGEND
+   ================================================================ */
+
+.dashboard-page
+.chart-legend {
+
+	color: var(--pms-muted) !important;
+
+	font-size: 11px !important;
+}
+
+
+/* ================================================================
+   LOADING
+   ================================================================ */
+
+.dashboard-page
+.number-card-loading,
+
+.dashboard-page
+.chart-loading-state {
+
+	opacity: 0.55;
+}
+
+
+/* ================================================================
+   EMPTY STATE
+   ================================================================ */
+
+.dashboard-page
+.widget
+.empty-state {
+
+	color: var(--pms-muted) !important;
+}
+
+
+/* ================================================================
+   DASHBOARD ROWS
+   ================================================================ */
+
+.dashboard-page
+.dashboard-row {
+
+	gap: 18px;
+}
+
+
+/* ================================================================
+   BUTTONS
+   ================================================================ */
+
+.dashboard-page
+.btn-primary {
+
+	background: var(--pms-green) !important;
+
+	border-color: var(--pms-green) !important;
+}
+
+.dashboard-page
+.btn-primary:hover {
+
+	background: var(--pms-green-dark) !important;
+
+	border-color: var(--pms-green-dark) !important;
+}
+
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+
+@media (max-width: 1100px) {
+
+	.dashboard-page
+	.layout-main-section,
+	.dashboard-page
+	.dashboard-view {
+
+		max-width: 100%;
+
+		padding-left: 15px;
+
+		padding-right: 15px;
+	}
+}
+
+
+@media (max-width: 820px) {
+
+	.dashboard-page
+	.widget.number-widget-box,
+	.dashboard-page
+	.widget.dashboard-widget-box {
+
+		padding: 16px !important;
+
+		border-radius: 14px !important;
+	}
+
+	.dashboard-page
+	.number-widget-box {
+
+		min-height: 110px;
+	}
+
+	.dashboard-page
+	.number-widget-box
+	.widget-content
+	.number {
+
+		font-size: 26px !important;
+	}
+
+	.dashboard-page
+	.dashboard-widget-box {
+
+		min-height: 260px;
+	}
+}
+
+
+@media (max-width: 600px) {
+
+	.dashboard-page
+	.layout-main-section,
+	.dashboard-page
+	.dashboard-view {
+
+		padding-left: 10px;
+
+		padding-right: 10px;
+	}
+
+	.dashboard-page
+	.widget-group {
+
+		margin-bottom: 14px !important;
+	}
+
+	.dashboard-page
+	.dashboard-widget-box {
+
+		padding: 14px !important;
+	}
+}

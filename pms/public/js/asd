@@ -1,0 +1,209 @@
+{% set seller_name, vat_registration_no, address, status, type_of_transaction = frappe.db.get_value("ZATCA Phase 1 Business Settings", {"company": doc.company}, ["company","vat_registration_number", "address", "status", "type_of_transaction"]) %}
+{% set street, city, district, postal_code = frappe.db.get_value('Address', address, [ "address_line1", "city", "state", "pincode"]) %}
+{% set customer_commercial_reg_no = frappe.db.get_value("Additional Buyer IDs", {"parent" : doc.customer, 'type_name': 'Commercial Registration Number'}, 'value') %}
+{% set customer_vat_reg_no = frappe.db.get_value("Customer", {"name" : doc.customer}, 'custom_vat_registration_number') %}
+{% set buyer_address = frappe.db.get_value("Dynamic Link", {"parenttype": "Address", "link_name": doc.customer}, "parent") %}
+{% if buyer_address %}
+    {% set buyer_street, buyer_city, buyer_district, buyer_postal_code = frappe.db.get_value('Address', buyer_address, [ "address_line1", "city", "state", "pincode"]) %}
+{% endif %}
+{% if status and status == 'Active' %}
+{% if letter_head %}
+<div class="letter-head">
+    {{ letter_head }}
+</div>
+{% endif %}
+{% set lang = frappe["form_dict"]["_lang"]  %}
+{% if lang == "العربية" or lang == "اردو" or lang == "پارسی" %}
+    {% set dir = "rtl" %}
+{% else %}
+    {% set dir = "ltr" %}
+{% endif %}
+<div class="text-center">
+{% if type_of_transaction == "Standard Tax Invoice" %}
+    {% set invoice_type = "Standard" %}
+{% elif type_of_transaction == "Simplified Tax Invoice" %}
+    {% set invoice_type = "Simplified" %}
+{% elif type_of_transaction == "Both" %}
+    {% if customer_vat_reg_no %}
+        {% set invoice_type = "Standard" %}
+    {% else %}
+        {% set invoice_type = "Simplified" %}
+    {% endif %}
+{% endif %}
+
+{% if invoice_type == "Standard" %}
+    {% if doc.is_return %}
+        <h2>{{_("Standard Tax Invoice Credit Note")}}</h2>
+    {% elif doc.is_debit_note %}
+        <h2>{{_("Standard Tax Invoice Debit Note")}}</h2>
+    {% else %}
+        <h2>{{_("Standard Tax Invoice")}}</h2>
+    {% endif %}
+{% elif invoice_type == "Simplified" %}
+{% if doc.is_return %}
+        <h2>{{_("Simplified Tax Invoice Credit Note")}}</h2>
+    {% elif doc.is_debit_note %}
+        <h2>{{_("Simplified Tax Invoice Debit Note")}}</h2>
+    {% else %}
+        <h2>{{_("Simplified Tax Invoice")}}</h2>
+    {% endif %}
+{% endif %}
+<div class="row">
+    <div class="col-md-6">
+        <span>
+            <b>{{_("Invoice ID")}}</b>
+            <p>{{ doc.name }}</p>
+        </span>
+    </div>
+    <div class="col-md-6">
+        <span>
+            <b>{{_("Posting Date")}}</b>
+            <p>{{ doc.get_formatted("posting_date") }}</p>
+        </span>
+    </div>
+</div>
+
+<hr>
+
+<table class="table table-bordered" dir={{ dir }}>
+        <tr>
+            <td>
+                <b>
+                    {{_("Seller Name")}}
+                </b>
+            </td>
+            <td>
+                <b>
+                    {{_("Address")}}
+                 </b>
+            </td>
+            <td>
+                <b>{{_("Vat Registration Number")}}</b>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <p>{{ seller_name }}</p>
+            </td>
+            <td>
+                {{ street }}, {{ district }}, {{ city }} | {{ postal_code }}
+            </td>
+            <td>
+                <p>{{ vat_registration_no }}</p>
+            </td>
+        </tr>
+</table>
+{% if invoice_type == "Standard" and not customer_vat_reg_no %}
+    <div style="display: none;">{{ frappe.msgprint( title='Error', msg=_("Customer does not have VAT registraion Number"), indicator="red" ) }}</div>
+    <div class="text-center w-100">
+        <p class="h2 text-danger">{{ doc.customer }} : {{ _("Customer does not have VAT registraion Number") }}</p>
+    </div>
+{% elif invoice_type == "Standard" and customer_vat_reg_no %}
+<table class="table table-bordered" dir={{ dir }}>
+    <tr>
+        <td>
+            <b>{{_("Buyer Name")}}</b>
+        </td>
+            <td>
+                <b>{{_("Address")}}</b>
+            </td>
+            <td>
+                <b>{{_("Vat Registration Number")}}</b>
+            </td>
+            <td>
+                <b>{{_("Commercial Registration Number")}}</b>
+            </td>
+    </tr>
+    <tr>
+        <td>
+            {{ doc.customer }}
+        </td>
+        <td>
+            {{ buyer_street }}, {{ buyer_district }},  {{ buyer_city }}, {{ buyer_postal_code }}
+        </td>
+        <td>
+            {{ customer_vat_reg_no }}
+        </td>
+        <td>
+            {{ customer_commercial_reg_no }}
+        </td>
+    </tr>
+</table>
+{% endif %}
+
+<div class='row'>
+    <div class='col-md-3 text-right'>
+
+    </div>
+    <div class='col-md-8 text-right'>
+
+    </div>
+</div>
+
+<table class="table table-bordered"  dir={{ dir }}>
+	<tbody>
+		<tr>
+			<th></th>
+			<th>{{_("Products")}}</th>
+			<th>{{_("Unit Price")}}</th>
+			<th class="text-center">{{_("Quantity")}}</th>
+			<th class="text-center">{{_("VAT %")}}</th>
+			<th class="text-center">{{_("VAT Amount")}}</th>
+		</tr>
+		{#
+        tax_rate and tax_amount were added to sales invoice item after 0.37.1, so invoices issued before then would have zero values for them.
+        For backward compatibilty, we fall back to item wise tax details in those cases
+        #}
+		{% set item_taxes = get_item_wise_tax_details(doc) %}
+		{%- for row in doc.items -%}
+		{% set item_tax_percent = row.tax_rate or item_taxes[row.name]['rate'] %}
+		{% set item_tax_total = (row.tax_amount or item_taxes[row.name]['amount']) / doc.conversion_rate %}
+		{% set item_total_after_tax = item_tax_total + row.net_amount %}
+		<tr>
+			<td style="width: 3%;">{{ row.idx }}</td>
+			<td style="width: 20%;">
+				{{ row.item_name }}
+				{% if row.item_code != row.item_name -%}
+				<br>Item Code: {{ row.item_code }}
+				{%- endif %}
+			</td>
+			<td style="width: 15%; text-align: right;">{{ row.get_formatted("rate", doc) }}</td>
+			<td style="width: 10%; text-align: right;">{{ row.qty | abs }}</td>
+			<td style="width: 10%; text-align: right;">{{ item_tax_percent }} %</td>
+			<td style="width: 15%; text-align: right;">{{ frappe.utils.fmt_money(item_tax_total | abs, None, doc.currency) }}</td>
+		</tr>
+		{%- endfor -%}
+	</tbody>
+	<div class="">
+    <table class="table table-bordered" dir={{ dir }}>
+        <tr>
+            <td>
+                <p>{{_("VAT Amount")}}</p>
+            </td>
+            <td>
+                <p>{{ frappe.utils.fmt_money(doc.total_taxes_and_charges | abs, None, doc.currency) }}</p>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <p>{{_("Total With VAT")}}</p>
+            </td>
+            <td>
+                <p>{{ frappe.utils.fmt_money(doc.grand_total | abs, None, doc.currency) }}</p>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div>
+<div class="text-center">
+        {% if doc.name %}
+            <img src="data:image/png;base64, {{ get_zatca_phase_1_qr_for_invoice(doc.name) }}" width=200 height=200>
+        {% endif %}
+</div>
+{% else %}
+    <div style="display: none;">{{ frappe.msgprint( title='Error', msg=_("Does not have active ZATCA Phase 1 Business Settings"), indicator="red" ) }}</div>
+    <div class="text-center w-100">
+        <p class="h2 text-danger">{{ doc.company }} : {{ _("Does not have active ZATCA Phase 1 Business Settings") }}</p>
+    </div>
+{% endif %}

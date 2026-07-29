@@ -1,0 +1,18 @@
+{
+ "doctype": "Number Card",
+ "name": "PMS Rent Collected This Month",
+ "label": "PMS Rent Collected This Month",
+ "module": "pms",
+ "is_public": 1,
+ "is_standard": 1,
+ "show_percentage_stats": 0,
+ "stats_time_interval": "Monthly",
+ "filters_json": "[]",
+ "dynamic_filters_json": "",
+ "docstatus": 0,
+ "idx": 0,
+ "color": "#38a169",
+ "type": "Custom",
+ "method": "pms.pms.dashboard_data.rent_collected_mtd",
+ "document_type": "Sales Invoice"
+}
