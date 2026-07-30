@@ -7,7 +7,7 @@
  "doctype": "Workspace",
  "for_user": "",
  "hide_custom": 0,
- "icon": "organization",
+ "icon": "fal fa-building",
  "idx": 0,
  "is_hidden": 0,
  "label": "PMS",
@@ -213,7 +213,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-07-27 17:32:16.131967",
+ "modified": "2026-07-30 08:22:35.973632",
  "modified_by": "Administrator",
  "module": "pms",
  "name": "PMS",

@@ -6,9 +6,15 @@
 // theming and role checks for free. All data comes from one call to
 //     pms.pms.dashboard_data.financial_overview
 // Charts are hand-drawn SVG — no chart library, no CDN, works offline.
+//
+// DUMMY DATA: set USE_DUMMY_DATA = true below to preview the dashboard with
+// realistic sample numbers, without needing the server-side method to exist
+// or return real data yet. Flip it back to false once your backend is ready.
 // ---------------------------------------------------------------------------
 
 frappe.provide("pms.dashboard");
+
+const USE_DUMMY_DATA = true;
 
 frappe.pages["pms-dashboard"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
@@ -33,11 +39,16 @@ pms.dashboard.Financial = class Financial {
 		this.currency = frappe.boot.sysdefaults.currency || "INR";
 
 		this.COLOURS = {
-			green: "#16a34a",
-			red: "#ef4444",
+			green: "#10b981",
+			red: "#fb7185",
 			amber: "#f59e0b",
-			ghost: "#d5e8dd",
-			donut: ["#16a34a", "#8b5cf6", "#f59e0b", "#3182ce", "#ef4444", "#94a3b8"],
+			blue: "#6366f1",
+			violet: "#a855f7",
+			teal: "#14b8a6",
+			sky: "#0ea5e9",
+			ghost: "#c7f2e3",
+			vacant: "#fde68a",
+			donut: ["#10b981", "#a855f7", "#f59e0b", "#0ea5e9", "#fb7185", "#94a3b8"],
 		};
 
 		this.setup_page_actions();
@@ -114,13 +125,27 @@ pms.dashboard.Financial = class Financial {
 					</div>
 				</div>
 
-				<div class="fin-row">
+				<div class="fin-row fin-split">
 					<div class="fin-panel fin-panel-revenue">
 						<div class="fin-panel-head">
 							<h3 class="fin-panel-title">${__("Revenue Comparison")}</h3>
 							<div class="fin-legend fin-revenue-legend"></div>
 						</div>
-						<svg class="fin-chart fin-revenue" height="250"></svg>
+						<svg class="fin-chart fin-revenue" height="270"></svg>
+					</div>
+
+					<div class="fin-panel fin-panel-units">
+						<div class="fin-panel-head">
+							<div>
+								<h3 class="fin-panel-title">${__("Units by Unit Type")}</h3>
+								<div class="fin-legend">
+									<span><i class="fin-dot" style="background:${this.COLOURS.green}"></i>${__("Leased")}</span>
+									<span><i class="fin-dot" style="background:${this.COLOURS.vacant}"></i>${__("Vacant")}</span>
+								</div>
+							</div>
+							<span class="fin-units-total"></span>
+						</div>
+						<div class="fin-unit-list"></div>
 					</div>
 				</div>
 
@@ -139,6 +164,10 @@ pms.dashboard.Financial = class Financial {
 			}
 		});
 
+		// hover values on the unit mix rows
+		this.$root.on("mousemove", ".fin-unit-row", (e) => this.unit_tip(e));
+		this.$root.on("mouseleave", ".fin-unit-row", () => this.hide_tip());
+
 		this.$root.on("change", ".fin-period", (e) => {
 			this.period = e.target.value;
 			this.load(true);
@@ -155,11 +184,144 @@ pms.dashboard.Financial = class Financial {
 		);
 	}
 
+	// ------------------------------------------------------------ dummy data
+	// A realistic, self-consistent sample payload matching exactly what
+	// pms.pms.dashboard_data.financial_overview is expected to return.
+	get_dummy_data() {
+		const month_labels = {
+			this_year: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+			last_12: ["Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"],
+			last_6: ["Feb", "Mar", "Apr", "May", "Jun", "Jul"],
+		};
+		const labels = month_labels[this.period] || month_labels.this_year;
+		const n = labels.length;
+
+		// deterministic pseudo-random so the demo looks the same on every reload
+		let seed = 42;
+		const rand = () => {
+			seed = (seed * 9301 + 49297) % 233280;
+			return seed / 233280;
+		};
+
+		const income = [];
+		const expenses = [];
+		const net = [];
+		for (let i = 0; i < n; i++) {
+			const base_income = 480000 + i * 9000;
+			const wobble_i = (rand() - 0.5) * 60000;
+			const inc = Math.round(base_income + wobble_i);
+			const base_expense = 260000 + i * 4000;
+			const wobble_e = (rand() - 0.5) * 40000;
+			const exp = Math.round(base_expense + wobble_e);
+			income.push(inc);
+			expenses.push(exp);
+			net.push(inc - exp);
+		}
+
+		const this_year_revenue = income.map((v) => Math.round(v * 1.02));
+		const last_year_revenue = income.map((v) => Math.round(v * 0.86 * (0.9 + rand() * 0.2)));
+
+		const this_month_income = income[n - 1];
+		const prev_month_income = income[n - 2] || income[n - 1];
+		const this_month_expense = expenses[n - 1];
+		const prev_month_expense = expenses[n - 2] || expenses[n - 1];
+		const this_month_net = this_month_income - this_month_expense;
+		const prev_month_net = prev_month_income - prev_month_expense;
+
+		const pct_change = (curr, prev) => (prev ? ((curr - prev) / prev) * 100 : 0);
+
+		return {
+			currency: this.currency || "INR",
+			as_on: frappe.datetime.str_to_user(frappe.datetime.get_today()),
+			period: this.period,
+
+			cards: {
+				income: {
+					value: this_month_income,
+					change: pct_change(this_month_income, prev_month_income),
+				},
+				expense: {
+					value: this_month_expense,
+					change: pct_change(this_month_expense, prev_month_expense),
+				},
+				net: {
+					value: this_month_net,
+					change: pct_change(this_month_net, prev_month_net),
+				},
+				pending: {
+					value: 186500,
+					overdue_count: 4,
+					overdue_amount: 92000,
+				},
+			},
+
+			cash_flow: {
+				labels: labels,
+				income: income,
+				expenses: expenses,
+				net: net,
+			},
+
+			expense_breakdown: {
+				rows: [
+					{ label: __("Maintenance & Repairs"), amount: 94000 },
+					{ label: __("Utilities"), amount: 61000 },
+					{ label: __("Property Tax"), amount: 48000 },
+					{ label: __("Staff Salaries"), amount: 72000 },
+					{ label: __("Insurance"), amount: 21000 },
+					{ label: __("Miscellaneous"), amount: 14500 },
+				],
+			},
+
+			collection_split: [
+				{ label: __("Collected"), amount: 620000 },
+				{ label: __("Pending"), amount: 94500 },
+				{ label: __("Overdue"), amount: 92000 },
+			],
+
+			unit_mix: [
+				{ label: __("1 BHK"), total: 24, occupied: 20, vacant: 4, linkable: true },
+				{ label: __("2 BHK"), total: 36, occupied: 31, vacant: 5, linkable: true },
+				{ label: __("3 BHK"), total: 18, occupied: 15, vacant: 3, linkable: true },
+				{ label: __("Studio"), total: 12, occupied: 9, vacant: 3, linkable: true },
+				{ label: __("Penthouse"), total: 4, occupied: 3, vacant: 1, linkable: true },
+			],
+
+			revenue_comparison: {
+				labels: labels,
+				this_year: { name: __("This Year"), values: this_year_revenue },
+				last_year: { name: __("Last Year"), values: last_year_revenue },
+			},
+
+			portfolio: {
+				occupancy_rate: 83.7,
+				occupied_units: 78,
+				total_units: 94,
+				active_leases: 78,
+				vacant_units: 16,
+				open_maintenance: 7,
+			},
+		};
+	}
+
 	// ----------------------------------------------------------------- data
 	load(force) {
 		if (this.loading) return;
 		this.loading = true;
 		this.$root.addClass("is-loading");
+
+		if (USE_DUMMY_DATA) {
+			// tiny artificial delay so the loading state is visible, just like
+			// a real network call would feel
+			setTimeout(() => {
+				this.loading = false;
+				this.$root.removeClass("is-loading");
+				this.data = this.get_dummy_data();
+				this.currency = this.data.currency || this.currency;
+				this.render();
+			}, 250);
+			return;
+		}
 
 		frappe
 			.call({
@@ -200,6 +362,7 @@ pms.dashboard.Financial = class Financial {
 		this.$root.find(".fin-period").val(this.data.period);
 		this.render_kpis();
 		this.render_breakdown_legend();
+		this.render_unit_mix();
 		this.render_portfolio();
 		this.draw_charts();
 	}
@@ -305,7 +468,7 @@ pms.dashboard.Financial = class Financial {
 					foot = `<span class="${card.note_tone || "fin-note"}">${card.note}</span>`;
 				}
 				return `
-					<${tag} class="fin-kpi"${href}>
+					<${tag} class="fin-kpi fin-kpi--${card.key}"${href}>
 						<div class="fin-kpi-head">
 							<span class="fin-kpi-label">${card.label}</span>
 							<span class="fin-kpi-icon">${icons[card.key]}</span>
@@ -493,7 +656,7 @@ pms.dashboard.Financial = class Financial {
 			this.svg("stop", {
 				offset: "0%",
 				"stop-color": this.COLOURS.green,
-				"stop-opacity": 0.22,
+				"stop-opacity": 0.28,
 			})
 		);
 		gradient.appendChild(
@@ -727,6 +890,72 @@ pms.dashboard.Financial = class Financial {
 		});
 	}
 
+	// -------------------------------------------------------- unit type mix
+	render_unit_mix() {
+		const rows = this.data.unit_mix || [];
+		const $list = this.$root.find(".fin-unit-list");
+		const $total = this.$root.find(".fin-units-total");
+
+		if (!rows.length) {
+			$total.text("");
+			$list.html(
+				`<div class="fin-empty">${__(
+					"No units created from PMS yet. Publish a Building to generate units."
+				)}</div>`
+			);
+			return;
+		}
+
+		const units = rows.reduce((sum, r) => sum + cint(r.total), 0);
+		$total.text(__("{0} units · {1} types", [units, rows.length]));
+
+		const widest = Math.max(1, ...rows.map((r) => cint(r.total)));
+
+		const html = rows
+			.map((row, i) => {
+				const total = cint(row.total);
+				const occupied = cint(row.occupied);
+				const vacant = cint(row.vacant);
+				// bar length is relative to the biggest type, the fill inside it is occupancy
+				const span = Math.max(4, (total / widest) * 100);
+				const filled = total ? (occupied / total) * 100 : 0;
+				const tag = row.linkable ? "a" : "div";
+				const href = row.linkable
+					? ` href="/app/asset?custom_created_by_pms=1&custom_unit_type=${encodeURIComponent(
+							row.label
+					  )}"`
+					: "";
+				return `<${tag} class="fin-unit-row" data-idx="${i}"${href}>
+						<div class="fin-unit-top">
+							<span class="fin-u-name" title="${frappe.utils.escape_html(
+								row.label
+							)}">${frappe.utils.escape_html(row.label)}</span>
+							<span class="fin-u-count">${total}</span>
+						</div>
+						<div class="fin-u-bar" style="width:${span}%">
+							<div class="fin-u-fill" style="width:${filled}%"></div>
+						</div>
+						<div class="fin-u-note">${__("{0} leased · {1} vacant", [occupied, vacant])}</div>
+					</${tag}>`;
+			})
+			.join("");
+
+		$list.html(html);
+	}
+
+	unit_tip(event) {
+		const rows = this.data.unit_mix || [];
+		const row = rows[cint($(event.currentTarget).data("idx"))];
+		if (!row) return;
+		const total = cint(row.total);
+		const rate = total ? Math.round((cint(row.occupied) / total) * 100) : 0;
+		this.show_tip(event, `${row.label} · ${rate}% ${__("occupied")}`, [
+			{ name: __("Leased"), colour: this.COLOURS.green, value: cint(row.occupied) },
+			{ name: __("Vacant"), colour: this.COLOURS.vacant, value: cint(row.vacant) },
+			{ name: __("Total units"), colour: "transparent", value: total },
+		]);
+	}
+
 	// ----------------------------------------------------- revenue comparison
 	draw_revenue() {
 		const $svg = this.$root.find(".fin-revenue");
@@ -740,7 +969,7 @@ pms.dashboard.Financial = class Financial {
 		const previous = rc.last_year.values || [];
 
 		this.$root.find(".fin-revenue-legend").html(
-			`<span><i class="fin-dot" style="background:${this.COLOURS.green}"></i>${frappe.utils.escape_html(
+			`<span><i class="fin-dot" style="background:${this.COLOURS.sky}"></i>${frappe.utils.escape_html(
 				rc.this_year.name
 			)}</span>
 			 <span><i class="fin-dot" style="background:${this.COLOURS.ghost}"></i>${frappe.utils.escape_html(
@@ -749,11 +978,11 @@ pms.dashboard.Financial = class Financial {
 		);
 
 		const W = this.chart_width($svg, 720);
-		const H = 250;
+		const H = 270; // same as the cash flow chart so both panels line up
 		svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
 		svg.setAttribute("width", W);
 
-		const padding = { left: 58, right: 16, top: 12, bottom: 26 };
+		const padding = { left: 58, right: 16, top: 12, bottom: 28 };
 		const iw = W - padding.left - padding.right;
 		const ih = H - padding.top - padding.bottom;
 		const [, dmax] = this.domain([].concat(current, previous));
@@ -781,6 +1010,20 @@ pms.dashboard.Financial = class Financial {
 		const bar_width = Math.max(4, Math.min(14, slot / 3.2));
 		const gap = 3;
 
+		// hover band sits under the bars so it never hides them
+		const band = this.svg("rect", {
+			class: "fin-hover-band",
+			x: padding.left,
+			y: padding.top,
+			width: slot,
+			height: ih,
+			rx: 6,
+			opacity: 0,
+		});
+		svg.appendChild(band);
+
+		const columns = [];
+
 		labels.forEach((label, i) => {
 			const centre = padding.left + slot * i + slot / 2;
 			const bars = [
@@ -793,12 +1036,12 @@ pms.dashboard.Financial = class Financial {
 				{
 					x: centre + gap / 2,
 					value: current[i] || 0,
-					colour: this.COLOURS.green,
+					colour: this.COLOURS.sky,
 					name: rc.this_year.name,
 				},
 			];
 
-			bars.forEach((bar) => {
+			const nodes = bars.map((bar) => {
 				const y = ys(bar.value);
 				const height = Math.max(0, padding.top + ih - y);
 				const rect = this.svg("rect", {
@@ -809,15 +1052,11 @@ pms.dashboard.Financial = class Financial {
 					rx: 3,
 					fill: bar.colour,
 				});
-				rect.style.cursor = "pointer";
-				rect.addEventListener("mousemove", (event) =>
-					this.show_tip(event, label, [
-						{ name: bar.name, colour: bar.colour, value: this.money(bar.value) },
-					])
-				);
-				rect.addEventListener("mouseleave", () => this.hide_tip());
 				svg.appendChild(rect);
+				return rect;
 			});
+
+			columns.push({ index: i, label: label, nodes: nodes });
 
 			const text = this.svg("text", {
 				x: centre,
@@ -826,6 +1065,65 @@ pms.dashboard.Financial = class Financial {
 			});
 			text.textContent = label;
 			svg.appendChild(text);
+		});
+
+		// one hit column per month — hovering anywhere in it reads out both years,
+		// so a month with a zero bar is still hoverable
+		columns.forEach((col) => {
+			const hit = this.svg("rect", {
+				x: padding.left + slot * col.index,
+				y: padding.top,
+				width: slot,
+				height: ih,
+				fill: "transparent",
+			});
+			hit.style.cursor = "crosshair";
+
+			hit.addEventListener("mousemove", (event) => {
+				band.setAttribute("x", padding.left + slot * col.index);
+				band.setAttribute("opacity", 1);
+				columns.forEach((other) =>
+					other.nodes.forEach((node) => {
+						node.style.opacity = other === col ? 1 : 0.4;
+					})
+				);
+
+				const curr = flt(current[col.index] || 0);
+				const prev = flt(previous[col.index] || 0);
+				const tip_rows = [
+					{
+						name: rc.this_year.name,
+						colour: this.COLOURS.sky,
+						value: this.money(curr),
+					},
+					{
+						name: rc.last_year.name,
+						colour: this.COLOURS.ghost,
+						value: this.money(prev),
+					},
+				];
+				const change = this.pct_text(prev ? ((curr - prev) / prev) * 100 : null);
+				if (change) {
+					tip_rows.push({
+						name: __("Change"),
+						colour: "transparent",
+						value: change,
+					});
+				}
+				this.show_tip(event, col.label, tip_rows);
+			});
+
+			hit.addEventListener("mouseleave", () => {
+				band.setAttribute("opacity", 0);
+				columns.forEach((other) =>
+					other.nodes.forEach((node) => {
+						node.style.opacity = 1;
+					})
+				);
+				this.hide_tip();
+			});
+
+			svg.appendChild(hit);
 		});
 	}
 };
