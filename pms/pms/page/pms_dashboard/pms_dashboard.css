@@ -20,6 +20,15 @@
 	--fin-mute: var(--text-muted, #6b7f75);
 	--fin-track: var(--control-bg, #f3f6f4);
 
+	/* Soft tints. Kept as rgba so they wash over whatever card colour the
+	   active theme uses — light mode gets pastels, dark mode stays readable. */
+	--fin-tint-green: rgba(22, 163, 74, 0.1);
+	--fin-tint-red: rgba(239, 68, 68, 0.09);
+	--fin-tint-blue: rgba(49, 130, 206, 0.1);
+	--fin-tint-amber: rgba(245, 158, 11, 0.12);
+	--fin-tint-violet: rgba(139, 92, 246, 0.1);
+	--fin-wash: rgba(22, 163, 74, 0.045);
+
 	--fin-radius: 12px;
 	--fin-gap: 14px;
 
@@ -79,7 +88,7 @@
 }
 
 .pms-fin .fin-kpi {
-	background: var(--fin-card);
+	background-color: var(--fin-card);
 	border: 1px solid var(--fin-line);
 	border-radius: var(--fin-radius);
 	padding: 16px 18px;
@@ -93,6 +102,47 @@
 	border-color: var(--fin-green);
 	transform: translateY(-1px);
 	color: inherit;
+}
+
+/* each card carries a light wash of its own meaning-colour */
+.pms-fin .fin-kpi--income {
+	background-image: linear-gradient(160deg, var(--fin-tint-green), transparent 70%);
+	border-color: rgba(22, 163, 74, 0.24);
+}
+
+.pms-fin .fin-kpi--expense {
+	background-image: linear-gradient(160deg, var(--fin-tint-red), transparent 70%);
+	border-color: rgba(239, 68, 68, 0.22);
+}
+
+.pms-fin .fin-kpi--net {
+	background-image: linear-gradient(160deg, var(--fin-tint-blue), transparent 70%);
+	border-color: rgba(49, 130, 206, 0.24);
+}
+
+.pms-fin .fin-kpi--pending {
+	background-image: linear-gradient(160deg, var(--fin-tint-amber), transparent 70%);
+	border-color: rgba(245, 158, 11, 0.28);
+}
+
+.pms-fin .fin-kpi--income .fin-kpi-icon {
+	background: var(--fin-tint-green);
+	color: var(--fin-green);
+}
+
+.pms-fin .fin-kpi--expense .fin-kpi-icon {
+	background: var(--fin-tint-red);
+	color: var(--fin-red);
+}
+
+.pms-fin .fin-kpi--net .fin-kpi-icon {
+	background: var(--fin-tint-blue);
+	color: var(--fin-blue);
+}
+
+.pms-fin .fin-kpi--pending .fin-kpi-icon {
+	background: var(--fin-tint-amber);
+	color: var(--fin-amber);
 }
 
 .pms-fin .fin-kpi-head {
@@ -172,7 +222,8 @@
 }
 
 .pms-fin .fin-panel {
-	background: var(--fin-card);
+	background-color: var(--fin-card);
+	background-image: linear-gradient(180deg, var(--fin-wash), transparent 140px);
 	border: 1px solid var(--fin-line);
 	border-radius: var(--fin-radius);
 	padding: 18px;
@@ -239,6 +290,15 @@
 	stroke-dasharray: 3 3;
 }
 
+.pms-fin .fin-chart .fin-hover-band {
+	fill: var(--fin-tint-green);
+	transition: opacity 0.1s ease;
+}
+
+.pms-fin .fin-chart rect {
+	transition: opacity 0.12s ease;
+}
+
 /* ---------- donut ----------------------------------------------------- */
 .pms-fin .fin-donut-wrap {
 	position: relative;
@@ -297,9 +357,85 @@
 	color: var(--fin-mute);
 }
 
+/* ---------- units by unit type --------------------------------------- */
+.pms-fin .fin-panel-units {
+	display: flex;
+	flex-direction: column;
+}
+
+.pms-fin .fin-units-total {
+	font-size: var(--text-sm, 12px);
+	color: var(--fin-mute);
+	white-space: nowrap;
+}
+
+.pms-fin .fin-unit-list {
+	margin-top: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	overflow-y: auto;
+	max-height: 262px; /* keeps the panel level with the chart beside it */
+}
+
+.pms-fin .fin-unit-row {
+	display: block;
+	padding: 7px 8px;
+	border-radius: 9px;
+	text-decoration: none;
+	color: inherit;
+	border: 1px solid transparent;
+}
+
+.pms-fin a.fin-unit-row:hover {
+	background: var(--fin-tint-green);
+	border-color: rgba(22, 163, 74, 0.22);
+	color: inherit;
+}
+
+.pms-fin .fin-unit-top {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	font-size: var(--text-md, 13px);
+}
+
+.pms-fin .fin-unit-row .fin-u-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.pms-fin .fin-unit-row .fin-u-count {
+	margin-left: auto;
+	font-weight: 700;
+}
+
+.pms-fin .fin-u-bar {
+	height: 8px;
+	border-radius: 99px;
+	background: var(--fin-tint-amber);
+	margin: 6px 0 4px;
+	overflow: hidden;
+	min-width: 12px;
+}
+
+.pms-fin .fin-u-fill {
+	height: 100%;
+	border-radius: 99px;
+	background: linear-gradient(90deg, var(--fin-green), #4ade80);
+	width: 0;
+	transition: width 0.6s ease;
+}
+
+.pms-fin .fin-u-note {
+	font-size: var(--text-sm, 11px);
+	color: var(--fin-mute);
+}
+
 /* ---------- portfolio tiles ------------------------------------------ */
 .pms-fin .fin-tile {
-	background: var(--fin-card);
+	background-color: var(--fin-card);
 	border: 1px solid var(--fin-line);
 	border-radius: var(--fin-radius);
 	padding: 16px 18px;
@@ -331,20 +467,34 @@
 }
 
 .pms-fin .fin-tile.fin-tile-occ {
-	background: linear-gradient(160deg, var(--fin-green-dark), var(--fin-green));
-	border-color: transparent;
-	color: #fff;
+	background-image: linear-gradient(150deg, rgba(22, 163, 74, 0.16), rgba(22, 163, 74, 0.03));
+	border-color: rgba(22, 163, 74, 0.28);
 }
 
-.pms-fin .fin-tile.fin-tile-occ .fin-tile-label,
-.pms-fin .fin-tile.fin-tile-occ .fin-tile-note {
-	color: rgba(255, 255, 255, 0.82);
+.pms-fin .fin-tile.fin-tile-occ .fin-tile-value {
+	color: var(--fin-green-dark);
+}
+
+/* the three link tiles each keep their own light tint */
+.pms-fin .fin-portfolio .fin-tile:nth-child(2) {
+	background-image: linear-gradient(150deg, var(--fin-tint-blue), transparent 75%);
+	border-color: rgba(49, 130, 206, 0.24);
+}
+
+.pms-fin .fin-portfolio .fin-tile:nth-child(3) {
+	background-image: linear-gradient(150deg, var(--fin-tint-amber), transparent 75%);
+	border-color: rgba(245, 158, 11, 0.28);
+}
+
+.pms-fin .fin-portfolio .fin-tile:nth-child(4) {
+	background-image: linear-gradient(150deg, var(--fin-tint-violet), transparent 75%);
+	border-color: rgba(139, 92, 246, 0.24);
 }
 
 .pms-fin .fin-track {
 	height: 6px;
 	border-radius: 99px;
-	background: rgba(255, 255, 255, 0.28);
+	background: rgba(22, 163, 74, 0.14);
 	margin: 10px 0 6px;
 	overflow: hidden;
 }
@@ -352,7 +502,7 @@
 .pms-fin .fin-track-fill {
 	height: 100%;
 	border-radius: 99px;
-	background: #fff;
+	background: linear-gradient(90deg, var(--fin-green-dark), var(--fin-green));
 	width: 0;
 	transition: width 0.7s ease;
 }
@@ -406,6 +556,748 @@
 .pms-fin.is-loading {
 	opacity: 0.5;
 	pointer-events: none;
+}
+
+/* ---------- responsive ------------------------------------------------ */
+@media (max-width: 1200px) {
+	.pms-fin .fin-kpis,
+	.pms-fin .fin-row.fin-quad {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	.pms-fin .fin-row.fin-split {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+@media (max-width: 640px) {
+	.pms-fin .fin-kpis,
+	.pms-fin .fin-row.fin-quad {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.pms-fin .fin-kpi-value {
+		font-size: 22px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.pms-fin *,
+	.pms-fin-tip {
+		transition: none !important;
+	}
+}
+
+/* ==========================================================================
+   PMS  ·  Financial dashboard  ·  /app/pms-dashboard
+
+   Styling only — this file does not require any change to pms_dashboard.js
+   or dashboard_data.py. Every colour is an rgba wash over the theme's own
+   card colour, so the page stays bright in light mode and readable in dark.
+
+   The last section ("chart colours") reaches into the SVG by matching the
+   hex values pms_dashboard.js writes as fill / stroke attributes. Delete
+   that one section if you ever change the palette in the JS.
+   ========================================================================== */
+
+.pms-fin {
+	/* ---- palette ---- */
+	--fin-green: #10b981;
+	--fin-green-dark: #047857;
+	--fin-rose: #f43f5e;
+	--fin-amber: #f59e0b;
+	--fin-sky: #0ea5e9;
+	--fin-violet: #8b5cf6;
+	--fin-indigo: #6366f1;
+	--fin-teal: #14b8a6;
+
+	--fin-red: var(--fin-rose);
+	--fin-blue: var(--fin-sky);
+
+	/* ---- washes ---- */
+	--fin-tint-green: rgba(16, 185, 129, 0.14);
+	--fin-tint-rose: rgba(244, 63, 94, 0.12);
+	--fin-tint-amber: rgba(245, 158, 11, 0.16);
+	--fin-tint-sky: rgba(14, 165, 233, 0.13);
+	--fin-tint-violet: rgba(139, 92, 246, 0.13);
+	--fin-tint-indigo: rgba(99, 102, 241, 0.12);
+	--fin-tint-teal: rgba(20, 184, 166, 0.13);
+
+	--fin-card: var(--card-bg, #ffffff);
+	--fin-line: var(--border-color, #e8ecea);
+	--fin-ink: var(--text-color, #12281f);
+	--fin-mute: var(--text-muted, #6b7f75);
+	--fin-track: var(--control-bg, #f3f6f4);
+
+	--fin-radius: 14px;
+	--fin-gap: 14px;
+	--fin-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 14px 30px -22px rgba(16, 24, 40, 0.35);
+
+	color: var(--fin-ink);
+	font-variant-numeric: tabular-nums;
+
+	/* soft colour wash behind the whole page */
+	background-image: radial-gradient(
+			900px 340px at 6% -8%,
+			rgba(16, 185, 129, 0.11),
+			transparent 70%
+		),
+		radial-gradient(760px 300px at 96% -4%, rgba(99, 102, 241, 0.1), transparent 70%);
+	background-repeat: no-repeat;
+	margin: -8px -12px 0;
+	padding: 12px 12px 4px;
+}
+
+.pms-fin * {
+	box-sizing: border-box;
+}
+
+/* ---------- toolbar: tabs + period ----------------------------------- */
+.pms-fin .fin-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin-bottom: var(--fin-gap);
+}
+
+.pms-fin .fin-tab {
+	border: 1px solid transparent;
+	background: transparent;
+	color: var(--fin-mute);
+	font-size: var(--text-md, 13px);
+	font-weight: 500;
+	padding: 6px 15px;
+	border-radius: 999px;
+	cursor: pointer;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.pms-fin .fin-tab:hover {
+	background: var(--fin-tint-sky);
+	color: var(--fin-ink);
+}
+
+.pms-fin .fin-tab.is-active {
+	background-image: linear-gradient(120deg, var(--fin-tint-green), var(--fin-tint-teal));
+	border-color: rgba(16, 185, 129, 0.35);
+	color: var(--fin-green-dark);
+	font-weight: 600;
+}
+
+.pms-fin .fin-toolbar .fin-spacer {
+	margin-left: auto;
+}
+
+.pms-fin .fin-asof {
+	font-size: var(--text-sm, 12px);
+	color: var(--fin-mute);
+	background: var(--fin-tint-indigo);
+	border-radius: 999px;
+	padding: 4px 12px;
+}
+
+/* ---------- KPI cards ------------------------------------------------- */
+/* the JS renders four identical .fin-kpi cards in a fixed order, so the
+   tints are keyed off position: income, expenses, net, pending */
+.pms-fin .fin-kpis {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: var(--fin-gap);
+	margin-bottom: var(--fin-gap);
+}
+
+.pms-fin .fin-kpi {
+	position: relative;
+	overflow: hidden;
+	background-color: var(--fin-card);
+	border: 1px solid var(--fin-line);
+	border-radius: var(--fin-radius);
+	padding: 18px;
+	text-decoration: none;
+	color: inherit;
+	display: block;
+	box-shadow: var(--fin-shadow);
+	transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* colour strip along the top of every card */
+.pms-fin .fin-kpi::before {
+	content: "";
+	position: absolute;
+	inset: 0 0 auto 0;
+	height: 4px;
+}
+
+.pms-fin a.fin-kpi:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 18px 34px -20px rgba(16, 24, 40, 0.45);
+	color: inherit;
+}
+
+.pms-fin .fin-kpis .fin-kpi:nth-child(1) {
+	background-image: linear-gradient(155deg, var(--fin-tint-green), transparent 68%);
+	border-color: rgba(16, 185, 129, 0.3);
+}
+.pms-fin .fin-kpis .fin-kpi:nth-child(1)::before {
+	background-image: linear-gradient(90deg, var(--fin-green), var(--fin-teal));
+}
+.pms-fin .fin-kpis .fin-kpi:nth-child(1) .fin-kpi-icon {
+	background: var(--fin-tint-green);
+	color: var(--fin-green-dark);
+}
+.pms-fin .fin-kpis .fin-kpi:nth-child(1) .fin-kpi-value {
+	color: var(--fin-green-dark);
+}
+
+.pms-fin .fin-kpis .fin-kpi:nth-child(2) {
+	background-image: linear-gradient(155deg, var(--fin-tint-rose), transparent 68%);
+	border-color: rgba(244, 63, 94, 0.28);
+}
+.pms-fin .fin-kpis .fin-kpi:nth-child(2)::before {
+	background-image: linear-gradient(90deg, var(--fin-rose), #fb7185);
+}
+.pms-fin .fin-kpis .fin-kpi:nth-child(2) .fin-kpi-icon {
+	background: var(--fin-tint-rose);
+	color: var(--fin-rose);
+}
+.pms-fin .fin-kpis .fin-kpi:nth-child(2) .fin-kpi-value {
+	color: #be123c;
+}
+
+.pms-fin .fin-kpis .fin-kpi:nth-child(3) {
+	background-image: linear-gradient(155deg, var(--fin-tint-sky), transparent 68%);
+	border-color: rgba(14, 165, 233, 0.3);
+}
+.pms-fin .fin-kpis .fin-kpi:nth-child(3)::before {
+	background-image: linear-gradient(90deg, var(--fin-sky), var(--fin-indigo));
+}
+.pms-fin .fin-kpis .fin-kpi:nth-child(3) .fin-kpi-icon {
+	background: var(--fin-tint-sky);
+	color: var(--fin-sky);
+}
+.pms-fin .fin-kpis .fin-kpi:nth-child(3) .fin-kpi-value {
+	color: #0369a1;
+}
+
+.pms-fin .fin-kpis .fin-kpi:nth-child(4) {
+	background-image: linear-gradient(155deg, var(--fin-tint-amber), transparent 68%);
+	border-color: rgba(245, 158, 11, 0.34);
+}
+.pms-fin .fin-kpis .fin-kpi:nth-child(4)::before {
+	background-image: linear-gradient(90deg, var(--fin-amber), #fbbf24);
+}
+.pms-fin .fin-kpis .fin-kpi:nth-child(4) .fin-kpi-icon {
+	background: var(--fin-tint-amber);
+	color: #b45309;
+}
+.pms-fin .fin-kpis .fin-kpi:nth-child(4) .fin-kpi-value {
+	color: #b45309;
+}
+
+.pms-fin .fin-kpi-head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.pms-fin .fin-kpi-label {
+	font-size: var(--text-sm, 12px);
+	color: var(--fin-mute);
+	line-height: 1.35;
+}
+
+.pms-fin .fin-kpi-icon {
+	height: 32px;
+	width: 32px;
+	flex: 0 0 32px;
+	border-radius: 10px;
+	background: var(--fin-track);
+	color: var(--fin-mute);
+	display: grid;
+	place-items: center;
+}
+
+.pms-fin .fin-kpi-icon svg {
+	height: 16px;
+	width: 16px;
+}
+
+.pms-fin .fin-kpi-value {
+	margin-top: 10px;
+	font-size: 26px;
+	font-weight: 700;
+	letter-spacing: -0.015em;
+	line-height: 1.15;
+	word-break: break-word;
+}
+
+.pms-fin .fin-kpi-foot {
+	margin-top: 8px;
+	font-size: var(--text-sm, 12px);
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.pms-fin .fin-kpi-foot .fin-note {
+	color: var(--fin-mute);
+	font-weight: 400;
+}
+
+/* change readings as pills */
+.pms-fin .fin-up,
+.pms-fin .fin-down {
+	border-radius: 999px;
+	padding: 2px 9px;
+	font-size: 11.5px;
+}
+
+.pms-fin .fin-up {
+	color: var(--fin-green-dark);
+	background: var(--fin-tint-green);
+}
+
+.pms-fin .fin-down {
+	color: #be123c;
+	background: var(--fin-tint-rose);
+}
+
+/* ---------- panels ---------------------------------------------------- */
+.pms-fin .fin-row {
+	display: grid;
+	gap: var(--fin-gap);
+	margin-bottom: var(--fin-gap);
+}
+
+.pms-fin .fin-row.fin-split {
+	grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+
+.pms-fin .fin-row.fin-quad {
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pms-fin .fin-panel {
+	position: relative;
+	overflow: hidden;
+	background-color: var(--fin-card);
+	background-image: linear-gradient(180deg, var(--fin-tint-green), transparent 150px);
+	border: 1px solid var(--fin-line);
+	border-radius: var(--fin-radius);
+	padding: 18px;
+	min-width: 0;
+	box-shadow: var(--fin-shadow);
+}
+
+/* each panel gets its own hue */
+.pms-fin .fin-panel-cashflow {
+	background-image: linear-gradient(180deg, var(--fin-tint-green), transparent 150px);
+	border-color: rgba(16, 185, 129, 0.24);
+}
+.pms-fin .fin-panel-breakdown {
+	background-image: linear-gradient(180deg, var(--fin-tint-violet), transparent 150px);
+	border-color: rgba(139, 92, 246, 0.24);
+}
+.pms-fin .fin-panel-revenue {
+	background-image: linear-gradient(180deg, var(--fin-tint-sky), transparent 150px);
+	border-color: rgba(14, 165, 233, 0.24);
+}
+
+.pms-fin .fin-panel-head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 4px;
+}
+
+.pms-fin .fin-panel-title {
+	margin: 0;
+	font-size: var(--text-md, 14px);
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+/* small colour tab in front of each panel title */
+.pms-fin .fin-panel-title::before {
+	content: "";
+	height: 15px;
+	width: 4px;
+	border-radius: 99px;
+	background: var(--fin-green);
+	flex: 0 0 4px;
+}
+
+.pms-fin .fin-panel-breakdown .fin-panel-title::before {
+	background: var(--fin-violet);
+}
+.pms-fin .fin-panel-revenue .fin-panel-title::before {
+	background: var(--fin-sky);
+}
+
+.pms-fin .fin-legend {
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
+	font-size: var(--text-sm, 12px);
+	color: var(--fin-mute);
+	margin-top: 7px;
+}
+
+.pms-fin .fin-legend span {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: var(--fin-track);
+	border-radius: 999px;
+	padding: 2px 10px 2px 8px;
+}
+
+.pms-fin .fin-dot {
+	height: 8px;
+	width: 8px;
+	border-radius: 99px;
+	display: inline-block;
+	flex: 0 0 8px;
+}
+
+.pms-fin .fin-chart {
+	width: 100%;
+	display: block;
+	overflow: visible;
+}
+
+.pms-fin .fin-chart text {
+	fill: var(--fin-mute);
+	font-size: 11px;
+	font-family: inherit;
+}
+
+.pms-fin .fin-chart .fin-grid line {
+	stroke: var(--fin-line);
+	stroke-width: 1;
+	stroke-dasharray: 2 5;
+}
+
+.pms-fin .fin-chart .fin-zero {
+	stroke: var(--fin-mute);
+	stroke-opacity: 0.4;
+	stroke-dasharray: 3 3;
+}
+
+/* ---------- donut ----------------------------------------------------- */
+.pms-fin .fin-donut-wrap {
+	position: relative;
+}
+
+.pms-fin .fin-donut-centre {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	text-align: center;
+	pointer-events: none;
+}
+
+.pms-fin .fin-donut-centre .fin-c-label {
+	font-size: var(--text-sm, 11px);
+	color: var(--fin-mute);
+}
+
+.pms-fin .fin-donut-centre .fin-c-value {
+	font-size: 20px;
+	font-weight: 700;
+	color: var(--fin-violet);
+}
+
+.pms-fin .fin-breakdown {
+	margin-top: 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.pms-fin .fin-breakdown-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: var(--text-md, 13px);
+	padding: 5px 8px;
+	border-radius: 8px;
+	transition: background 0.12s ease;
+}
+
+.pms-fin .fin-breakdown-row:hover {
+	background: var(--fin-tint-violet);
+}
+
+.pms-fin .fin-breakdown-row .fin-b-name {
+	color: var(--fin-mute);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.pms-fin .fin-breakdown-row .fin-b-amount {
+	margin-left: auto;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.pms-fin .fin-breakdown-row .fin-b-pct {
+	min-width: 42px;
+	text-align: right;
+	font-size: var(--text-sm, 12px);
+	color: var(--fin-mute);
+}
+
+/* ---------- portfolio tiles ------------------------------------------ */
+.pms-fin .fin-tile {
+	position: relative;
+	overflow: hidden;
+	background-color: var(--fin-card);
+	border: 1px solid var(--fin-line);
+	border-radius: var(--fin-radius);
+	padding: 16px 18px;
+	text-decoration: none;
+	color: inherit;
+	display: block;
+	box-shadow: var(--fin-shadow);
+	transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pms-fin a.fin-tile:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 18px 34px -20px rgba(16, 24, 40, 0.45);
+	color: inherit;
+}
+
+.pms-fin .fin-tile-label {
+	font-size: var(--text-sm, 12px);
+	color: var(--fin-mute);
+}
+
+.pms-fin .fin-tile-value {
+	margin-top: 6px;
+	font-size: 24px;
+	font-weight: 700;
+	letter-spacing: -0.015em;
+}
+
+.pms-fin .fin-tile-note {
+	font-size: var(--text-sm, 12px);
+	color: var(--fin-mute);
+	margin-top: 3px;
+}
+
+/* occupancy tile — light mint instead of the old solid dark green */
+.pms-fin .fin-tile.fin-tile-occ {
+	background-image: linear-gradient(150deg, var(--fin-tint-green), rgba(20, 184, 166, 0.06));
+	border-color: rgba(16, 185, 129, 0.32);
+	color: inherit;
+}
+
+.pms-fin .fin-tile.fin-tile-occ .fin-tile-label,
+.pms-fin .fin-tile.fin-tile-occ .fin-tile-note {
+	color: var(--fin-mute);
+}
+
+.pms-fin .fin-tile.fin-tile-occ .fin-tile-value {
+	color: var(--fin-green-dark);
+}
+
+.pms-fin .fin-portfolio .fin-tile:nth-child(2) {
+	background-image: linear-gradient(150deg, var(--fin-tint-sky), transparent 72%);
+	border-color: rgba(14, 165, 233, 0.28);
+}
+.pms-fin .fin-portfolio .fin-tile:nth-child(2) .fin-tile-value {
+	color: #0369a1;
+}
+
+.pms-fin .fin-portfolio .fin-tile:nth-child(3) {
+	background-image: linear-gradient(150deg, var(--fin-tint-amber), transparent 72%);
+	border-color: rgba(245, 158, 11, 0.32);
+}
+.pms-fin .fin-portfolio .fin-tile:nth-child(3) .fin-tile-value {
+	color: #b45309;
+}
+
+.pms-fin .fin-portfolio .fin-tile:nth-child(4) {
+	background-image: linear-gradient(150deg, var(--fin-tint-violet), transparent 72%);
+	border-color: rgba(139, 92, 246, 0.28);
+}
+.pms-fin .fin-portfolio .fin-tile:nth-child(4) .fin-tile-value {
+	color: #6d28d9;
+}
+
+.pms-fin .fin-track {
+	height: 7px;
+	border-radius: 99px;
+	background: rgba(16, 185, 129, 0.18);
+	margin: 10px 0 6px;
+	overflow: hidden;
+}
+
+.pms-fin .fin-track-fill {
+	height: 100%;
+	border-radius: 99px;
+	background-image: linear-gradient(90deg, var(--fin-teal), var(--fin-green));
+	width: 0;
+	transition: width 0.7s ease;
+}
+
+/* ---------- tooltip --------------------------------------------------- */
+.pms-fin-tip {
+	position: fixed;
+	z-index: 1060;
+	pointer-events: none;
+	background: var(--card-bg, #fff);
+	color: var(--text-color, #12281f);
+	border: 1px solid var(--border-color, #e8ecea);
+	border-radius: 12px;
+	padding: 9px 11px;
+	font-size: 12px;
+	box-shadow: 0 12px 30px rgba(15, 47, 34, 0.16);
+	opacity: 0;
+	transition: opacity 0.1s ease;
+	max-width: 260px;
+}
+
+.pms-fin-tip b {
+	display: block;
+	margin-bottom: 5px;
+	padding-bottom: 5px;
+	border-bottom: 1px solid var(--border-color, #e8ecea);
+}
+
+.pms-fin-tip .fin-tip-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--text-muted, #6b7f75);
+	line-height: 1.7;
+}
+
+.pms-fin-tip .fin-tip-row .fin-dot {
+	height: 8px;
+	width: 8px;
+	border-radius: 99px;
+	display: inline-block;
+	flex: 0 0 8px;
+}
+
+.pms-fin-tip .fin-tip-row .fin-tip-amount {
+	margin-left: auto;
+	padding-left: 14px;
+	font-weight: 600;
+	color: var(--text-color, #12281f);
+}
+
+/* ---------- empty / loading ------------------------------------------ */
+.pms-fin .fin-empty {
+	display: grid;
+	place-items: center;
+	min-height: 120px;
+	text-align: center;
+	color: var(--fin-mute);
+	font-size: var(--text-md, 13px);
+	padding: 20px;
+}
+
+.pms-fin.is-loading {
+	opacity: 0.5;
+	pointer-events: none;
+}
+
+/* ==========================================================================
+   Chart colours — OPTIONAL
+   pms_dashboard.js writes its palette straight onto the SVG as fill / stroke
+   attributes. CSS beats a presentation attribute, so the rules below repaint
+   the lines, bars and donut without touching the JS. They match on the exact
+   hex values in the JS COLOURS object:
+       #16a34a green · #ef4444 red · #f59e0b amber · #d5e8dd ghost
+       donut: #16a34a #8b5cf6 #f59e0b #3182ce #ef4444 #94a3b8
+   Change the palette in the JS and these stop matching — delete this whole
+   section then, and the charts simply keep the JS colours.
+   ========================================================================== */
+
+/* cash flow lines */
+.pms-fin .fin-chart path[stroke="#16a34a"] {
+	stroke: var(--fin-green);
+}
+.pms-fin .fin-chart path[stroke="#ef4444"] {
+	stroke: var(--fin-rose);
+}
+.pms-fin .fin-chart path[stroke="#f59e0b"] {
+	stroke: var(--fin-amber);
+}
+
+/* the area gradient under the income line */
+.pms-fin .fin-cashflow stop {
+	stop-color: var(--fin-green);
+}
+
+/* the hover markers that sit on each line */
+.pms-fin .fin-cashflow circle[stroke="#16a34a"] {
+	stroke: var(--fin-green);
+}
+.pms-fin .fin-cashflow circle[stroke="#ef4444"] {
+	stroke: var(--fin-rose);
+}
+.pms-fin .fin-cashflow circle[stroke="#f59e0b"] {
+	stroke: var(--fin-amber);
+}
+
+/* revenue bars: current year solid, previous year a soft indigo */
+.pms-fin .fin-revenue rect[fill="#16a34a"] {
+	fill: var(--fin-green);
+}
+.pms-fin .fin-revenue rect[fill="#d5e8dd"] {
+	fill: rgba(99, 102, 241, 0.45);
+}
+
+/* donut segments, in the order the JS assigns them */
+.pms-fin .fin-donut circle[stroke="#16a34a"] {
+	stroke: var(--fin-green);
+}
+.pms-fin .fin-donut circle[stroke="#3182ce"] {
+	stroke: var(--fin-sky);
+}
+.pms-fin .fin-donut circle[stroke="#ef4444"] {
+	stroke: var(--fin-rose);
+}
+.pms-fin .fin-donut circle[stroke="#94a3b8"] {
+	stroke: var(--fin-indigo);
+}
+
+/* legend dots are inline styles, so they need !important to follow along */
+.pms-fin .fin-panel-cashflow .fin-legend span:nth-child(1) .fin-dot {
+	background: var(--fin-green) !important;
+}
+.pms-fin .fin-panel-cashflow .fin-legend span:nth-child(2) .fin-dot {
+	background: var(--fin-rose) !important;
+}
+.pms-fin .fin-revenue-legend span:nth-child(1) .fin-dot {
+	background: var(--fin-green) !important;
+}
+.pms-fin .fin-revenue-legend span:nth-child(2) .fin-dot {
+	background: rgba(99, 102, 241, 0.45) !important;
+}
+.pms-fin .fin-breakdown-row:nth-child(1) .fin-dot {
+	background: var(--fin-green) !important;
+}
+.pms-fin .fin-breakdown-row:nth-child(4) .fin-dot {
+	background: var(--fin-sky) !important;
+}
+.pms-fin .fin-breakdown-row:nth-child(5) .fin-dot {
+	background: var(--fin-rose) !important;
+}
+.pms-fin .fin-breakdown-row:nth-child(6) .fin-dot {
+	background: var(--fin-indigo) !important;
 }
 
 /* ---------- responsive ------------------------------------------------ */

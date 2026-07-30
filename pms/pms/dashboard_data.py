@@ -199,6 +199,60 @@ def expense_breakdown(start, end, limit=5):
 
 
 # --------------------------------------------------------------------------
+# Unit mix (how the portfolio splits across Unit Types)
+# --------------------------------------------------------------------------
+def units_by_type(limit=6):
+    """Unit count per Unit Type, split into occupied / vacant.
+
+    Reads the same PMS-created Assets the occupancy KPI uses, so the totals
+    here always add up to `portfolio.total_units`. Anything past `limit` is
+    folded into a single 'Others' row so the panel never scrolls forever.
+    """
+    try:
+        rows = frappe.db.sql(
+            """
+            SELECT COALESCE(NULLIF(a.custom_unit_type, ''), 'Unassigned') AS label,
+                   COUNT(a.name)                                          AS total,
+                   COALESCE(SUM(CASE WHEN a.custom_occupancy_status = 'Occupied'
+                                     THEN 1 ELSE 0 END), 0)               AS occupied
+            FROM `tabAsset` a
+            WHERE a.custom_created_by_pms = 1
+            GROUP BY label
+            ORDER BY total DESC, label ASC
+            """,
+            as_dict=True,
+        )
+    except Exception:
+        # missing custom fields on a fresh bench shouldn't break the page
+        return []
+
+    def _row(label, total, occupied, linkable=True):
+        total = int(total or 0)
+        occupied = int(occupied or 0)
+        return {
+            "label": label,
+            "total": total,
+            "occupied": occupied,
+            "vacant": max(0, total - occupied),
+            "linkable": 1 if linkable else 0,
+        }
+
+    top = [_row(r.label, r.total, r.occupied, r.label != "Unassigned") for r in rows[:limit]]
+
+    rest = rows[limit:]
+    if rest:
+        top.append(
+            _row(
+                "Others",
+                sum(int(r.total or 0) for r in rest),
+                sum(int(r.occupied or 0) for r in rest),
+                linkable=False,
+            )
+        )
+    return top
+
+
+# --------------------------------------------------------------------------
 # Receivables detail
 # --------------------------------------------------------------------------
 def overdue_summary():
@@ -337,6 +391,7 @@ def financial_overview(period="this_year"):
             "this_year": {"name": str(this_year), "values": ty_values},
             "last_year": {"name": str(last_year), "values": ly_values},
         },
+        "unit_mix": units_by_type(),
         "portfolio": {
             "occupied_units": occupied,
             "total_units": total_units,
