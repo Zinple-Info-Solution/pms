@@ -28,6 +28,9 @@ doc_events = {
         "on_submit": "pms.pms.billing.on_payment_entry",
         "on_cancel": "pms.pms.billing.on_payment_entry",
     },
+    "Move Out": {
+        "on_submit": "pms.pms.billing.on_move_out",
+    },
 }
 
 # ------------------------------------------------------------------

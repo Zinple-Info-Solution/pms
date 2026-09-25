@@ -13,3 +13,4 @@ pms.patches.v2_0.flag_properties_without_owner
 pms.patches.v2_1.verify_lease_unit_links
 pms.patches.v2_1.flag_unresolved_sales_invoice_item_unit_type
 pms.patches.v2_1.remove_stale_custom_unit_no
+pms.patches.v2_2.create_deposit_liability_account

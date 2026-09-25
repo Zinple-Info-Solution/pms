@@ -424,6 +424,76 @@ def make_renewal(lease_name):
 
 
 # ------------------------------------------------------------
+# Move-in
+# ------------------------------------------------------------
+@frappe.whitelist()
+def make_move_in(lease_name, unit=None):
+    """Create a draft Move In for a submitted lease. If the lease has a
+    single unit, it's pre-filled; multi-unit leases require the caller to
+    pass `unit`."""
+    lease = frappe.get_doc("Lease Agreement", lease_name)
+    if lease.docstatus != 1:
+        frappe.throw("Only a submitted lease can have a Move In recorded.")
+
+    if not unit:
+        if len(lease.units) != 1:
+            frappe.throw(
+                "This lease has more than one unit — please specify which "
+                "unit is moving in."
+            )
+        unit = lease.units[0].unit_id
+
+    move_in = frappe.get_doc({
+        "doctype": "Move In",
+        "lease": lease.name,
+        "unit": unit,
+        "move_in_date": lease.start_date,
+    })
+    move_in.insert()
+
+    frappe.msgprint(
+        f"Move In <b>{move_in.name}</b> created. Review and submit it.",
+        indicator="green",
+    )
+    return move_in.name
+
+
+# ------------------------------------------------------------
+# Move-out
+# ------------------------------------------------------------
+@frappe.whitelist()
+def make_move_out(lease_name, unit=None):
+    """Create a draft Move Out for a submitted lease, mirroring the
+    make_renewal() pattern. If the lease has a single unit, it's
+    pre-filled; multi-unit leases require the caller to pass `unit`."""
+    lease = frappe.get_doc("Lease Agreement", lease_name)
+    if lease.docstatus != 1:
+        frappe.throw("Only a submitted lease can be moved out.")
+
+    if not unit:
+        if len(lease.units) != 1:
+            frappe.throw(
+                "This lease has more than one unit — please specify which "
+                "unit is moving out."
+            )
+        unit = lease.units[0].unit_id
+
+    move_out = frappe.get_doc({
+        "doctype": "Move Out",
+        "lease": lease.name,
+        "unit": unit,
+        "move_out_date": lease.end_date,
+    })
+    move_out.insert()
+
+    frappe.msgprint(
+        f"Move Out <b>{move_out.name}</b> created. Review and submit it.",
+        indicator="green",
+    )
+    return move_out.name
+
+
+# ------------------------------------------------------------
 # Facility helpers used by the client script
 # ------------------------------------------------------------
 @frappe.whitelist()

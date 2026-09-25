@@ -241,6 +241,117 @@ def on_invoice_change(doc, method=None):
             frappe.db.set_value("Rent Schedule", row_name, "status", "Invoiced")
 
 
+DEPOSIT_LIABILITY_ACCOUNT_NAME = "Tenant Security Deposits"
+
+
+def on_move_out(doc, method=None):
+    """Move Out doc_event (on_submit): put the unit into make-ready and
+    draft a Security Deposit Settlement so the deposit refund/deduction
+    flow can proceed."""
+    frappe.db.set_value("Unit", doc.unit, "status", "Under Maintenance")
+
+    if doc.settlement:
+        return
+
+    settlement = frappe.get_doc({
+        "doctype": "Security Deposit Settlement",
+        "lease": doc.lease,
+        "move_out": doc.name,
+    })
+    settlement.insert(ignore_permissions=True)
+    doc.db_set("settlement", settlement.name)
+
+    frappe.msgprint(
+        f"Security Deposit Settlement <b>{settlement.name}</b> drafted.",
+        indicator="blue", alert=True,
+    )
+
+
+def get_deposit_liability_account(company=None):
+    company = company or frappe.db.get_single_value("Global Defaults", "default_company")
+    account_name = f"{DEPOSIT_LIABILITY_ACCOUNT_NAME} - {frappe.get_cached_value('Company', company, 'abbr')}"
+    if not frappe.db.exists("Account", account_name):
+        frappe.throw(
+            f"Account <b>{account_name}</b> not found. Run the "
+            f"create_deposit_liability_account patch first."
+        )
+    return account_name
+
+
+def settle_security_deposit(settlement):
+    """Called from Security Deposit Settlement.on_submit(). Books the
+    deduction portion (if any) via a Journal Entry against the deposit
+    liability account, and pays out the refund portion (if positive) via
+    a Payment Entry to the tenant's Customer. If deductions exceed the
+    deposit, no auto-payment is made — the shortfall is left for manual
+    follow-up (billing/collections), which is out of scope here."""
+    lease = frappe.get_doc("Lease Agreement", settlement.lease)
+    deposit_account = get_deposit_liability_account(
+        frappe.db.get_value("Sales Invoice", {"customer": lease.customer}, "company")
+        or frappe.db.get_single_value("Global Defaults", "default_company")
+    )
+
+    if flt(settlement.total_deductions) > 0:
+        default_income_account = frappe.get_cached_value(
+            "Company", frappe.db.get_single_value("Global Defaults", "default_company"), "default_income_account"
+        )
+        je = frappe.get_doc({
+            "doctype": "Journal Entry",
+            "voucher_type": "Journal Entry",
+            "posting_date": frappe.utils.today(),
+            "user_remark": f"Security deposit deductions for lease {lease.name} ({settlement.name})",
+            "accounts": [
+                {
+                    "account": deposit_account,
+                    "debit_in_account_currency": flt(settlement.total_deductions),
+                    "party_type": "Customer",
+                    "party": lease.customer,
+                },
+                {
+                    "account": default_income_account,
+                    "credit_in_account_currency": flt(settlement.total_deductions),
+                },
+            ],
+        })
+        je.insert(ignore_permissions=True)
+        je.submit()
+        settlement.db_set("journal_entry", je.name)
+
+    if flt(settlement.refund_amount) > 0:
+        company = frappe.db.get_single_value("Global Defaults", "default_company")
+        bank_or_cash = (
+            frappe.get_cached_value("Company", company, "default_bank_account")
+            or frappe.get_cached_value("Company", company, "default_cash_account")
+        )
+        # payment_type "Pay": paid_from = the source of funds (bank/cash),
+        # paid_to = the party's account (here, the deposit liability being
+        # drawn down) — matches erpnext.accounts.doctype.payment_entry
+        # .payment_entry.get_payment_entry()'s own from/to convention.
+        pe = frappe.get_doc({
+            "doctype": "Payment Entry",
+            "payment_type": "Pay",
+            "party_type": "Customer",
+            "party": lease.customer,
+            "paid_from": bank_or_cash,
+            "paid_to": deposit_account,
+            "paid_amount": flt(settlement.refund_amount),
+            "received_amount": flt(settlement.refund_amount),
+            "reference_no": settlement.name,
+            "reference_date": frappe.utils.today(),
+            "remarks": f"Security deposit refund for lease {lease.name} ({settlement.name})",
+        })
+        pe.insert(ignore_permissions=True)
+        pe.submit()
+        settlement.db_set("payment_entry", pe.name)
+    elif flt(settlement.refund_amount) < 0:
+        frappe.msgprint(
+            f"Deductions exceed the deposit by "
+            f"{frappe.format_value(-flt(settlement.refund_amount), {'fieldtype': 'Currency'})}. "
+            f"No automatic payment created — follow up manually for collection.",
+            indicator="orange", alert=True,
+        )
+
+
 def on_payment_entry(doc, method=None):
     """Payment Entry hook — when rent invoices get paid (or payment is
     cancelled), refresh the linked Rent Schedule rows."""

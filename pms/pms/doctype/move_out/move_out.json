@@ -1,0 +1,153 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "naming_series:",
+ "creation": "2026-09-25 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "lease",
+  "unit",
+  "notice_date",
+  "move_out_date",
+  "column_break_main",
+  "tenant",
+  "forwarding_address",
+  "settlement",
+  "section_checklist",
+  "condition_checklist",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "MVO-.YYYY.-.#####"
+  },
+  {
+   "fieldname": "lease",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Lease Agreement",
+   "options": "Lease Agreement",
+   "reqd": 1
+  },
+  {
+   "fieldname": "unit",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Unit",
+   "options": "Unit",
+   "reqd": 1
+  },
+  {
+   "fieldname": "notice_date",
+   "fieldtype": "Date",
+   "label": "Notice Date"
+  },
+  {
+   "default": "Today",
+   "fieldname": "move_out_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Move Out Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "lease.tenant",
+   "fieldname": "tenant",
+   "fieldtype": "Link",
+   "label": "Tenant",
+   "options": "Tenant",
+   "read_only": 1
+  },
+  {
+   "fieldname": "forwarding_address",
+   "fieldtype": "Small Text",
+   "label": "Forwarding Address"
+  },
+  {
+   "fieldname": "settlement",
+   "fieldtype": "Link",
+   "label": "Security Deposit Settlement",
+   "no_copy": 1,
+   "options": "Security Deposit Settlement",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_checklist",
+   "fieldtype": "Section Break",
+   "label": "Condition Checklist"
+  },
+  {
+   "fieldname": "condition_checklist",
+   "fieldtype": "Table",
+   "label": "Condition Checklist",
+   "options": "Move In Checklist Item"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Move Out",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "is_submittable": 1,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-25 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "pms",
+ "name": "Move Out",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Property Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

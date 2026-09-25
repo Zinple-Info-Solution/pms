@@ -149,6 +149,36 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Move In",
+   "link_count": 0,
+   "link_to": "Move In",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Move Out",
+   "link_count": 0,
+   "link_to": "Move Out",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Security Deposit Settlement",
+   "link_count": 0,
+   "link_to": "Security Deposit Settlement",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Sales Invoice",
    "link_count": 0,
    "link_to": "Sales Invoice",

@@ -32,6 +32,29 @@ frappe.ui.form.on('Lease Agreement', {
             }).addClass("btn-primary");
         }
 
+        // Move In / Move Out for active leases
+        if (frm.doc.docstatus === 1 && frm.doc.status === "Active") {
+            frm.add_custom_button(__("Move In"), () => {
+                frappe.call({
+                    method: "pms.pms.doctype.lease_agreement.lease_agreement.make_move_in",
+                    args: { lease_name: frm.doc.name },
+                    callback(r) {
+                        if (r.message) frappe.set_route("Form", "Move In", r.message);
+                    }
+                });
+            }, __("Create"));
+
+            frm.add_custom_button(__("Move Out"), () => {
+                frappe.call({
+                    method: "pms.pms.doctype.lease_agreement.lease_agreement.make_move_out",
+                    args: { lease_name: frm.doc.name },
+                    callback(r) {
+                        if (r.message) frappe.set_route("Form", "Move Out", r.message);
+                    }
+                });
+            }, __("Create"));
+        }
+
         if (frm.doc.docstatus === 1) {
             const pending = (frm.doc.rent_schedule || [])
                 .filter(r => r.status === "Pending");
