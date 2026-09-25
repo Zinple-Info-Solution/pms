@@ -47,6 +47,7 @@
   "section_escalation",
   "rent_escalation",
   "status",
+  "renewal_offered",
   "amended_from"
  ],
  "fields": [
@@ -213,7 +214,16 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
-   "options": "\nActive\nExpired\nTerminated"
+   "options": "\nActive\nNotice Given\nExpired\nTerminated"
+  },
+  {
+   "default": "0",
+   "fieldname": "renewal_offered",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Renewal Offered",
+   "no_copy": 1,
+   "read_only": 1
   },
   {
    "fieldname": "amended_from",

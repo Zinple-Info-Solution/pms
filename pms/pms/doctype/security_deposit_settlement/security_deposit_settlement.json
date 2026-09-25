@@ -21,6 +21,7 @@
   "section_gl",
   "journal_entry",
   "payment_entry",
+  "shortfall_invoice",
   "amended_from"
  ],
  "fields": [
@@ -121,6 +122,14 @@
    "label": "Payment Entry (refund)",
    "no_copy": 1,
    "options": "Payment Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "shortfall_invoice",
+   "fieldtype": "Link",
+   "label": "Shortfall Invoice",
+   "no_copy": 1,
+   "options": "Sales Invoice",
    "read_only": 1
   },
   {

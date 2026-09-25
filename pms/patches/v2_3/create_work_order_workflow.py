@@ -28,7 +28,7 @@ def execute():
     if frappe.db.exists("Workflow", WORKFLOW_NAME):
         return
 
-    for role in ["Maintenance Staff", "Property Manager", "Accountant"]:
+    for role in ["Maintenance Staff", "Property Manager", "Accountant", "Owner"]:
         if not frappe.db.exists("Role", role):
             frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(
                 ignore_permissions=True
@@ -85,6 +85,10 @@ def execute():
             {
                 "state": "Awaiting Owner Approval", "action": "Approve", "next_state": "In Progress",
                 "allowed": "Accountant",
+            },
+            {
+                "state": "Awaiting Owner Approval", "action": "Approve", "next_state": "In Progress",
+                "allowed": "Owner",
             },
             {
                 "state": "In Progress", "action": "Mark Complete", "next_state": "Completed",

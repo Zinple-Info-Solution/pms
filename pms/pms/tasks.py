@@ -4,6 +4,7 @@
 import frappe
 from frappe.utils import today, add_days, date_diff, getdate
 from pms.pms.doctype.lease_agreement.lease_agreement import log_occupancy_event
+from pms.pms.doctype.unit.unit import sync_unit_listing
 
 
 def check_lease_expiry():
@@ -43,6 +44,7 @@ def check_lease_expiry():
                             "current_occupant_end_date": None,
                         },
                     )
+                    sync_unit_listing(row.unit_id, "Vacant")
                     log_occupancy_event(row.unit_id, "Vacated", lease=doc.name)
 
             # 3. Notify the owner in-app
@@ -222,8 +224,99 @@ def send_overdue_rent_reminders():
                         f"{overdue_days} day(s) later."
                     ),
                 }).insert(ignore_permissions=True)
+
+            # At 30 days overdue, open an actual actionable task for the
+            # manager (call, payment plan or legal notice) rather than just
+            # another notification.
+            if overdue_days == 30 and not frappe.db.exists("ToDo", {
+                "reference_type": "Lease Agreement", "reference_name": r.lease,
+                "description": ["like", "%30+ days overdue%"],
+            }):
+                frappe.get_doc({
+                    "doctype": "ToDo",
+                    "description": (
+                        f"Lease {r.lease} ({r.tenant}) is 30+ days overdue on "
+                        f"{r.billing_period} — call the tenant, arrange a payment "
+                        f"plan, or start a legal notice."
+                    ),
+                    "reference_type": "Lease Agreement",
+                    "reference_name": r.lease,
+                    "assigned_by": "Administrator",
+                    "allocated_to": r.owner,
+                    "priority": "High",
+                }).insert(ignore_permissions=True)
         except Exception:
             frappe.log_error(
                 frappe.get_traceback(),
                 f"Overdue rent reminder failed: {r.lease}",
             )
+
+
+def send_signature_reminders():
+    """Runs daily: nudge about draft leases (generated from an approved
+    Rental Application but not yet submitted) that have sat unsigned for
+    2+ days. There's no e-sign integration here, so "signed" means
+    "submitted" — this reminds whoever needs to chase the paperwork."""
+    drafts = frappe.get_all(
+        "Lease Agreement",
+        filters={"docstatus": 0, "creation": ["<=", add_days(today(), -2)]},
+        fields=["name", "tenant", "owner", "creation"],
+    )
+    for lease in drafts:
+        try:
+            frappe.get_doc({
+                "doctype": "Notification Log",
+                "subject": f"Lease {lease.name} is still unsigned",
+                "for_user": lease.owner,
+                "type": "Alert",
+                "document_type": "Lease Agreement",
+                "document_name": lease.name,
+                "email_content": (
+                    f"Lease Agreement <b>{lease.name}</b> for tenant "
+                    f"<b>{lease.tenant}</b> has been in Draft for "
+                    f"{date_diff(getdate(today()), getdate(lease.creation))} day(s). "
+                    f"Follow up to get it signed and submitted."
+                ),
+            }).insert(ignore_permissions=True)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"Signature reminder failed: {lease.name}")
+
+
+def send_renewal_offers():
+    """Runs daily: 60 days before an Active lease ends, auto-draft a
+    renewal (at the current rent — the Property Manager adjusts for any
+    increase before sending) and email the tenant. Only offered once per
+    lease, tracked via the renewal_offered flag."""
+    from pms.pms.doctype.lease_agreement.lease_agreement import make_renewal
+
+    upcoming = frappe.get_all(
+        "Lease Agreement",
+        filters={
+            "status": "Active",
+            "docstatus": 1,
+            "renewal_offered": 0,
+            "end_date": ["between", [today(), add_days(today(), 60)]],
+        },
+        fields=["name", "tenant"],
+    )
+
+    for lease in upcoming:
+        try:
+            renewal_name = make_renewal(lease.name)
+            frappe.db.set_value("Lease Agreement", lease.name, "renewal_offered", 1)
+
+            tenant_email = frappe.db.get_value("Tenant", lease.tenant, "email")
+            if tenant_email:
+                frappe.sendmail(
+                    recipients=[tenant_email],
+                    subject=f"Your lease is coming up for renewal",
+                    message=(
+                        f"<p>Your lease <b>{lease.name}</b> is ending soon. A renewal "
+                        f"offer <b>{renewal_name}</b> has been prepared — log in to your "
+                        f"tenant portal or contact us to accept it, or let us know if "
+                        f"you'll be moving out.</p>"
+                    ),
+                    delayed=True,
+                )
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"Renewal offer failed: {lease.name}")

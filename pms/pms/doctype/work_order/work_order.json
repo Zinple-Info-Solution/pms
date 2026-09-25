@@ -12,10 +12,16 @@
   "unit",
   "priority",
   "status",
+  "is_make_ready",
   "column_break_main",
   "vendor",
   "assigned_to",
   "approval_required",
+  "bill_to",
+  "section_sla",
+  "sla_due_by",
+  "column_break_sla",
+  "sla_breached",
   "section_details",
   "description",
   "section_cost",
@@ -23,9 +29,13 @@
   "column_break_cost",
   "actual_cost",
   "purchase_invoice",
+  "sales_invoice",
   "section_completion",
   "completion_notes",
-  "completed_on"
+  "completion_photos",
+  "column_break_completion",
+  "completed_on",
+  "tenant_confirmed"
  ],
  "fields": [
   {
@@ -76,6 +86,14 @@
    "read_only": 1
   },
   {
+   "default": "0",
+   "fieldname": "is_make_ready",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Is Make-Ready Job",
+   "read_only": 1
+  },
+  {
    "fieldname": "column_break_main",
    "fieldtype": "Column Break"
   },
@@ -98,6 +116,37 @@
    "fieldtype": "Check",
    "hidden": 1,
    "label": "Approval Required",
+   "read_only": 1
+  },
+  {
+   "default": "Owner",
+   "description": "Who ultimately pays: the owner (via a vendor bill on their Cost Center) or the tenant (via a Sales Invoice — e.g. tenant-caused damage).",
+   "fieldname": "bill_to",
+   "fieldtype": "Select",
+   "label": "Bill To",
+   "options": "Owner\nTenant"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_sla",
+   "fieldtype": "Section Break",
+   "label": "SLA"
+  },
+  {
+   "fieldname": "sla_due_by",
+   "fieldtype": "Datetime",
+   "label": "SLA Due By",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_sla",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "sla_breached",
+   "fieldtype": "Check",
+   "label": "SLA Breached",
    "read_only": 1
   },
   {
@@ -139,6 +188,14 @@
    "read_only": 1
   },
   {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Tenant Invoice",
+   "no_copy": 1,
+   "options": "Sales Invoice",
+   "read_only": 1
+  },
+  {
    "collapsible": 1,
    "fieldname": "section_completion",
    "fieldtype": "Section Break",
@@ -150,9 +207,27 @@
    "label": "Completion Notes"
   },
   {
+   "fieldname": "completion_photos",
+   "fieldtype": "Table",
+   "label": "Completion Photos",
+   "options": "Listing Photo"
+  },
+  {
+   "fieldname": "column_break_completion",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "completed_on",
    "fieldtype": "Datetime",
    "label": "Completed On",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Set by the tenant from their portal once they confirm the issue is fixed.",
+   "fieldname": "tenant_confirmed",
+   "fieldtype": "Check",
+   "label": "Tenant Confirmed",
    "read_only": 1
   }
  ],

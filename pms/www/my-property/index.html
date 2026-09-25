@@ -8,6 +8,28 @@
 	<p class="text-muted">No owner record is linked to your account. Please contact the property manager.</p>
 	{% else %}
 
+	<h4>Maintenance Approvals Needed</h4>
+	{% if pending_approvals %}
+	<table class="table table-bordered" id="pending-approvals-table">
+		<thead><tr><th>Work Order</th><th>Property</th><th>Unit</th><th>Priority</th><th>Description</th><th>Estimated Cost</th><th></th></tr></thead>
+		<tbody>
+			{% for w in pending_approvals %}
+			<tr id="row-{{ w.name }}">
+				<td>{{ w.name }}</td>
+				<td>{{ w.property }}</td>
+				<td>{{ w.unit or "" }}</td>
+				<td>{{ w.priority }}</td>
+				<td>{{ w.description or "" }}</td>
+				<td>{{ frappe.format(w.estimated_cost, {"fieldtype": "Currency"}) }}</td>
+				<td><button class="btn btn-sm btn-primary approve-btn" data-name="{{ w.name }}">Approve</button></td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+	{% else %}
+	<p class="text-muted">Nothing waiting on your approval right now.</p>
+	{% endif %}
+
 	<h4>Properties</h4>
 	{% if properties %}
 	<table class="table table-bordered">
@@ -52,4 +74,23 @@
 
 	{% endif %}
 </div>
+
+<script>
+document.querySelectorAll('.approve-btn').forEach(function (btn) {
+	btn.addEventListener('click', function () {
+		var name = btn.getAttribute('data-name');
+		btn.disabled = true;
+		frappe.call({
+			method: 'pms.www.my-property.index.approve_work_order',
+			args: { work_order: name },
+			callback: function () {
+				document.getElementById('row-' + name).remove();
+			},
+			error: function () {
+				btn.disabled = false;
+			}
+		});
+	});
+});
+</script>
 {% endblock %}

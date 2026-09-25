@@ -40,3 +40,26 @@ class OwnerDistribution(Document):
         self.db_set("payment_entry", pe.name)
 
         frappe.db.set_value("Owner Statement", self.owner_statement, "status", "Distributed")
+        self.email_statement_to_owner(owner)
+
+    def email_statement_to_owner(self, owner):
+        if not owner.email:
+            return
+        try:
+            pdf = frappe.get_print("Owner Statement", self.owner_statement, as_pdf=True)
+            frappe.sendmail(
+                recipients=[owner.email],
+                subject=f"Owner Statement {self.owner_statement} — payout {frappe.format_value(self.amount, {'fieldtype': 'Currency'})}",
+                message=(
+                    f"<p>Your payout of <b>{frappe.format_value(self.amount, {'fieldtype': 'Currency'})}</b> "
+                    f"for <b>{self.property}</b> has been processed. The statement is attached, and also "
+                    f"available on your <a href='{frappe.utils.get_url('/my-property')}'>owner portal</a>.</p>"
+                ),
+                attachments=[{
+                    "fname": f"{self.owner_statement}.pdf",
+                    "fcontent": pdf,
+                }],
+                delayed=True,
+            )
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"Owner statement email failed: {self.name}")

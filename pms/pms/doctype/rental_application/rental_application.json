@@ -19,6 +19,8 @@
   "monthly_income",
   "column_break_emp",
   "application_fee",
+  "income_ratio",
+  "screening_score",
   "section_co_applicants",
   "co_applicants",
   "section_documents",
@@ -27,6 +29,7 @@
   "application_references",
   "section_screening",
   "screening_notes",
+  "rejection_email_sent",
   "lease"
  ],
  "fields": [
@@ -110,6 +113,21 @@
    "label": "Application Fee"
   },
   {
+   "description": "monthly_income / unit's monthly rent. 3.0+ is the usual affordability threshold.",
+   "fieldname": "income_ratio",
+   "fieldtype": "Float",
+   "label": "Income Ratio",
+   "precision": "1",
+   "read_only": 1
+  },
+  {
+   "fieldname": "screening_score",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Screening Score",
+   "read_only": 1
+  },
+  {
    "collapsible": 1,
    "fieldname": "section_co_applicants",
    "fieldtype": "Section Break",
@@ -155,6 +173,15 @@
    "fieldname": "screening_notes",
    "fieldtype": "Text",
    "label": "Screening Notes"
+  },
+  {
+   "default": "0",
+   "fieldname": "rejection_email_sent",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Rejection Email Sent",
+   "no_copy": 1,
+   "read_only": 1
   },
   {
    "fieldname": "lease",

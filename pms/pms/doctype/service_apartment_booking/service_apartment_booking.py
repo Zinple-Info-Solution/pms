@@ -5,6 +5,7 @@ from frappe.utils import flt, getdate, date_diff, today
 
 from pms.pms.billing import ensure_item
 from pms.pms.doctype.lease_agreement.lease_agreement import log_occupancy_event
+from pms.pms.doctype.unit.unit import sync_unit_listing
 
 
 class ServiceApartmentBooking(Document):
@@ -92,6 +93,7 @@ class ServiceApartmentBooking(Document):
             "current_occupant_start_date": getdate(self.check_in),
             "current_occupant_end_date": getdate(self.check_out),
         })
+        sync_unit_listing(self.unit, "Occupied")
         log_occupancy_event(self.unit, "Occupied", booking=self.name)
         self.db_set("status", "Checked In")
         frappe.msgprint("Guest checked in. Unit marked Occupied.",
@@ -168,4 +170,5 @@ class ServiceApartmentBooking(Document):
                 "current_occupant_start_date": None,
                 "current_occupant_end_date": None,
             })
+            sync_unit_listing(self.unit, "Vacant")
             log_occupancy_event(self.unit, "Vacated", booking=self.name)

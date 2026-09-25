@@ -2,6 +2,7 @@
 import frappe
 from frappe.model.document import Document
 from frappe.utils import flt, add_months, add_days, getdate, formatdate, month_diff
+from pms.pms.doctype.unit.unit import sync_unit_listing
 
 FREQUENCY_MONTHS = {
     "Monthly": 1,
@@ -26,6 +27,7 @@ class LeaseAgreement(Document):
     def on_submit(self):
         self.update_units()
         self.update_status("Active")
+        self.create_deposit_and_first_invoice()
 
     def on_cancel(self):
         self.release_units()
@@ -55,11 +57,11 @@ class LeaseAgreement(Document):
                 f"No units found for property <b>{self.building}</b>."
             )
 
-        occupied = [u.name for u in all_units if u.status == "Occupied"]
-        if occupied and self.docstatus == 0:
+        unavailable = [u.name for u in all_units if u.status in ("Occupied", "Reserved", "Notice Given")]
+        if unavailable and self.docstatus == 0:
             frappe.throw(
                 "Cannot lease the whole building — these units are "
-                "already occupied: <b>" + ", ".join(occupied) + "</b>"
+                "not available: <b>" + ", ".join(unavailable) + "</b>"
             )
 
         self.set("units", [])
@@ -342,6 +344,9 @@ class LeaseAgreement(Document):
     # Unit occupancy
     # ------------------------------------------------------------
     def update_units(self):
+        """Lease submission reserves the unit (not yet Occupied — that
+        happens on Move In, so there's a real state for "signed but the
+        tenant hasn't moved in yet")."""
         if not self.units:
             frappe.throw("Please add at least one Unit before submitting.")
 
@@ -354,23 +359,40 @@ class LeaseAgreement(Document):
                 frappe.throw(f"Unit <b>{unit_id}</b> not found.")
 
             current_status = frappe.db.get_value("Unit", unit_id, "status")
-            if current_status == "Occupied":
+            if current_status in ("Reserved", "Occupied"):
                 frappe.throw(
-                    f"Unit <b>{unit_id}</b> is already Occupied. "
+                    f"Unit <b>{unit_id}</b> is already {current_status}. "
                     f"Please select a different unit."
                 )
 
             frappe.db.set_value("Unit", unit_id, {
-                "status": "Occupied",
+                "status": "Reserved",
                 "current_occupant_start_date": self.start_date,
                 "current_occupant_end_date": self.end_date,
             })
-            log_occupancy_event(unit_id, "Occupied", lease=self.name)
+            sync_unit_listing(unit_id, "Reserved")
+            log_occupancy_event(unit_id, "Reserved", lease=self.name)
 
         frappe.msgprint(
-            f"{len(self.units)} Unit(s) marked as Occupied.",
+            f"{len(self.units)} Unit(s) marked as Reserved.",
             indicator="green", alert=True,
         )
+
+    def create_deposit_and_first_invoice(self):
+        """On lease submission: invoice the security deposit (if any) and
+        the first rent cycle, with a payment link emailed to the tenant."""
+        from pms.pms.billing import make_deposit_invoice, make_rent_invoice, email_invoice_to_tenant
+
+        if flt(self.security_deposit) > 0:
+            deposit_invoice = make_deposit_invoice(self.name)
+            if deposit_invoice:
+                email_invoice_to_tenant(deposit_invoice)
+
+        if self.rent_schedule:
+            first_row = self.rent_schedule[0]
+            if first_row.status == "Pending":
+                rent_invoice = make_rent_invoice(self.name, first_row.name)
+                email_invoice_to_tenant(rent_invoice)
 
     def release_units(self):
         for row in self.units or []:
@@ -382,6 +404,7 @@ class LeaseAgreement(Document):
                 "current_occupant_start_date": None,
                 "current_occupant_end_date": None,
             })
+            sync_unit_listing(unit_id, "Vacant")
             log_occupancy_event(unit_id, "Vacated", lease=self.name)
 
         frappe.msgprint(

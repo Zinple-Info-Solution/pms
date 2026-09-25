@@ -13,6 +13,7 @@
   "period_start",
   "period_end",
   "status",
+  "share_percent",
   "section_income",
   "income_lines",
   "gross_income",
@@ -20,9 +21,11 @@
   "expense_lines",
   "gross_expense",
   "section_totals",
+  "owner_share_income",
+  "owner_share_expense",
+  "column_break_share",
   "management_fee",
   "reserve_held",
-  "column_break_totals",
   "net_distributable"
  ],
  "fields": [
@@ -78,6 +81,13 @@
    "options": "Draft\nFinalized\nSent\nDistributed"
   },
   {
+   "description": "This owner's ownership share of the property, at the time this statement was generated.",
+   "fieldname": "share_percent",
+   "fieldtype": "Percent",
+   "label": "Ownership Share %",
+   "read_only": 1
+  },
+  {
    "collapsible": 1,
    "fieldname": "section_income",
    "fieldtype": "Section Break",
@@ -118,7 +128,25 @@
   {
    "fieldname": "section_totals",
    "fieldtype": "Section Break",
-   "label": "Distribution"
+   "label": "Distribution (this owner's share)"
+  },
+  {
+   "description": "gross_income x share_percent",
+   "fieldname": "owner_share_income",
+   "fieldtype": "Currency",
+   "label": "Owner's Share of Income",
+   "read_only": 1
+  },
+  {
+   "description": "gross_expense x share_percent",
+   "fieldname": "owner_share_expense",
+   "fieldtype": "Currency",
+   "label": "Owner's Share of Expense",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_share",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "management_fee",
@@ -131,10 +159,6 @@
    "fieldtype": "Currency",
    "label": "Reserve Held",
    "read_only": 1
-  },
-  {
-   "fieldname": "column_break_totals",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "net_distributable",

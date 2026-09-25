@@ -57,16 +57,21 @@
 	{% if maintenance_requests %}
 	<table class="table table-bordered">
 		<thead>
-			<tr><th>Request</th><th>Subject</th><th>Priority</th><th>Status</th><th>Date</th></tr>
+			<tr><th>Request</th><th>Subject</th><th>Priority</th><th>Status</th><th>Date</th><th></th></tr>
 		</thead>
 		<tbody>
 			{% for m in maintenance_requests %}
-			<tr>
+			<tr id="mr-row-{{ m.name }}">
 				<td>{{ m.name }}</td>
 				<td>{{ m.subject }}</td>
 				<td>{{ m.priority }}</td>
 				<td>{{ m.status }}</td>
 				<td>{{ frappe.format(m.request_date, {"fieldtype": "Date"}) }}</td>
+				<td>
+					{% if m.work_order and m.work_order in confirmable_work_orders %}
+					<button class="btn btn-sm btn-success confirm-btn" data-name="{{ m.work_order }}">Confirm Fixed</button>
+					{% endif %}
+				</td>
 			</tr>
 			{% endfor %}
 		</tbody>
@@ -78,4 +83,22 @@
 
 	{% endif %}
 </div>
+
+<script>
+document.querySelectorAll('.confirm-btn').forEach(function (btn) {
+	btn.addEventListener('click', function () {
+		btn.disabled = true;
+		frappe.call({
+			method: 'pms.www.my-work-orders.index.confirm_work_order',
+			args: { work_order: btn.getAttribute('data-name') },
+			callback: function () {
+				btn.textContent = 'Confirmed';
+			},
+			error: function () {
+				btn.disabled = false;
+			}
+		});
+	});
+});
+</script>
 {% endblock %}

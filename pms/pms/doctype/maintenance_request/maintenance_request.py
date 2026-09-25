@@ -27,10 +27,24 @@ class MaintenanceRequest(Document):
             "priority": self.priority,
             "description": f"{self.subject}\n\n{self.description or ''}".strip(),
             "assigned_to": self.assigned_to,
+            "vendor": self.find_vendor_by_category(),
         })
         work_order.insert(ignore_permissions=True)
         self.db_set("work_order", work_order.name)
         return work_order.name
+
+    def find_vendor_by_category(self):
+        """Route to a vendor by issue category: an enabled Supplier whose
+        Supplier Group name matches this request's issue type (e.g. a
+        "Plumbing" Supplier Group of plumbing vendors). Returns None
+        (leaving vendor blank for manual assignment) if no such group or
+        no vendor is set up yet — this is a convenience, not a hard
+        requirement."""
+        if not self.issue_type or not frappe.db.exists("Supplier Group", self.issue_type):
+            return None
+        return frappe.db.get_value(
+            "Supplier", {"supplier_group": self.issue_type, "disabled": 0}, "name"
+        )
 
     # ------------------------------------------------------------
     # Validations

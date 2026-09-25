@@ -101,7 +101,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
-   "options": "Vacant\nOccupied\nUnder Maintenance\nBlocked"
+   "options": "Vacant\nReserved\nOccupied\nNotice Given\nUnder Maintenance\nBlocked"
   },
   {
    "fieldname": "column_break_status",

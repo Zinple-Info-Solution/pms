@@ -52,3 +52,38 @@ def _next_due_date(frequency):
         return add_days(getdate(today()), 7)
     months = FREQUENCY_MONTHS.get(frequency, 1)
     return add_months(getdate(today()), months)
+
+
+def escalate_overdue_work_orders():
+    """Runs hourly: flag any Work Order past its SLA due time (and not yet
+    Completed/Closed) as breached, and notify the Property Manager once
+    per breach."""
+    overdue = frappe.get_all(
+        "Work Order",
+        filters={
+            "sla_due_by": ["<", frappe.utils.now_datetime()],
+            "sla_breached": 0,
+            "status": ["not in", ["Completed", "Closed"]],
+        },
+        fields=["name", "property", "priority", "description"],
+    )
+
+    for wo in overdue:
+        try:
+            frappe.db.set_value("Work Order", wo.name, "sla_breached", 1)
+            frappe.get_doc({
+                "doctype": "Notification Log",
+                "subject": f"SLA missed: Work Order {wo.name} ({wo.priority})",
+                "for_user": frappe.db.get_value(
+                    "Property", wo.property, "owner"
+                ) or "Administrator",
+                "type": "Alert",
+                "document_type": "Work Order",
+                "document_name": wo.name,
+                "email_content": (
+                    f"Work Order <b>{wo.name}</b> ({wo.priority} priority) has "
+                    f"missed its SLA and is still open: {wo.description or ''}"
+                ),
+            }).insert(ignore_permissions=True)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"SLA escalation failed: {wo.name}")

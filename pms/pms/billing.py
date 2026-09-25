@@ -31,6 +31,98 @@ def ensure_item(item_code, item_group="Services"):
     return item_code
 
 
+DEPOSIT_ITEM = "Security Deposit"
+
+
+@frappe.whitelist()
+def make_deposit_invoice(lease_name):
+    """Invoice the security deposit once, right after lease submission.
+    Returns None (not an error) if there's nothing to invoice or it was
+    already invoiced — safe to call more than once."""
+    lease = frappe.get_doc("Lease Agreement", lease_name)
+    if not flt(lease.security_deposit):
+        return None
+    if frappe.db.exists("Sales Invoice Item", {
+        "custom_lease_agreement": lease.name, "item_code": ensure_item(DEPOSIT_ITEM),
+    }):
+        return None
+
+    cost_center = frappe.db.get_value("Property", lease.building, "cost_center")
+    si = frappe.get_doc({
+        "doctype": "Sales Invoice",
+        "customer": lease.customer,
+        "posting_date": today(),
+        "due_date": today(),
+        "ignore_pricing_rule": 1,
+        "items": [{
+            "item_code": ensure_item(DEPOSIT_ITEM),
+            "qty": 1,
+            "uom": "Nos",
+            "rate": flt(lease.security_deposit),
+            "cost_center": cost_center,
+            "custom_lease_agreement": lease.name,
+            "description": f"Security deposit — Lease {lease.name}",
+        }],
+        "remarks": f"Security deposit for Lease Agreement {lease.name}",
+    })
+    si.insert(ignore_permissions=True)
+    return si.name
+
+
+def email_invoice_to_tenant(invoice_name):
+    """Email the tenant a copy of the invoice with a link to pay it on the
+    portal. Best-effort — a missing email address just skips silently
+    rather than blocking lease/invoice creation."""
+    if not invoice_name:
+        return
+    si = frappe.get_doc("Sales Invoice", invoice_name)
+    email = frappe.db.get_value("Customer", si.customer, "email_id") or frappe.db.get_value(
+        "Tenant", {"customer": si.customer}, "email"
+    )
+    if not email:
+        return
+
+    pay_url = frappe.utils.get_url(f"/my-lease")
+    try:
+        frappe.sendmail(
+            recipients=[email],
+            subject=f"Invoice {si.name} — {frappe.format_value(si.grand_total, {'fieldtype': 'Currency'})} due {si.due_date}",
+            message=(
+                f"<p>An invoice of <b>{frappe.format_value(si.grand_total, {'fieldtype': 'Currency'})}</b> "
+                f"has been raised, due on <b>{si.due_date}</b>.</p>"
+                f"<p><a href='{pay_url}'>View and pay on your tenant portal</a></p>"
+            ),
+            delayed=True,
+        )
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), f"email_invoice_to_tenant failed: {invoice_name}")
+
+
+def send_payment_receipt(payment_entry_name):
+    """Best-effort receipt email to the payer when a Payment Entry against
+    a rent-linked Sales Invoice is submitted."""
+    pe = frappe.get_doc("Payment Entry", payment_entry_name)
+    if pe.party_type != "Customer" or not pe.party:
+        return
+    email = frappe.db.get_value("Customer", pe.party, "email_id") or frappe.db.get_value(
+        "Tenant", {"customer": pe.party}, "email"
+    )
+    if not email:
+        return
+    try:
+        frappe.sendmail(
+            recipients=[email],
+            subject=f"Payment received — {frappe.format_value(pe.paid_amount, {'fieldtype': 'Currency'})}",
+            message=(
+                f"<p>We've received your payment of "
+                f"<b>{frappe.format_value(pe.paid_amount, {'fieldtype': 'Currency'})}</b>. Thank you.</p>"
+            ),
+            delayed=True,
+        )
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), f"send_payment_receipt failed: {payment_entry_name}")
+
+
 @frappe.whitelist()
 def make_rent_invoice(lease_name, schedule_row=None):
     """Create a draft Sales Invoice for the next Pending row of a lease's
@@ -192,7 +284,8 @@ def make_rent_invoice(lease_name, schedule_row=None):
 
 def generate_due_invoices():
     """Called by the daily scheduler: auto-create invoices for every
-    Pending schedule row that is due within the next 3 days."""
+    Pending schedule row that is due within the next 5 days, and email
+    each one to the tenant with a link to pay it on the portal."""
     rows = frappe.db.sql("""
         SELECT rs.name AS row_name, rs.parent AS lease
         FROM `tabRent Schedule` rs
@@ -202,11 +295,12 @@ def generate_due_invoices():
           AND la.docstatus = 1
           AND la.status = 'Active'
         ORDER BY rs.due_date
-    """, add_days(today(), 3), as_dict=True)
+    """, add_days(today(), 5), as_dict=True)
 
     for r in rows:
         try:
             invoice = make_rent_invoice(r.lease, r.row_name)
+            email_invoice_to_tenant(invoice)
             lease_owner = frappe.db.get_value("Lease Agreement", r.lease, "owner")
             frappe.get_doc({
                 "doctype": "Notification Log",
@@ -315,10 +409,12 @@ DEPOSIT_LIABILITY_ACCOUNT_NAME = "Tenant Security Deposits"
 
 
 def on_move_out(doc, method=None):
-    """Move Out doc_event (on_submit): put the unit into make-ready and
-    draft a Security Deposit Settlement so the deposit refund/deduction
-    flow can proceed."""
+    """Move Out doc_event (on_submit): put the unit into make-ready, create
+    the cleaning/repair work order, and draft a Security Deposit
+    Settlement (pre-filled by comparing this checklist against the
+    original Move In) so the deposit refund/deduction flow can proceed."""
     frappe.db.set_value("Unit", doc.unit, "status", "Under Maintenance")
+    _create_make_ready_work_order(doc)
 
     if doc.settlement:
         return
@@ -327,6 +423,7 @@ def on_move_out(doc, method=None):
         "doctype": "Security Deposit Settlement",
         "lease": doc.lease,
         "move_out": doc.name,
+        "deductions": _suggest_deductions_from_inspection_diff(doc),
     })
     settlement.insert(ignore_permissions=True)
     doc.db_set("settlement", settlement.name)
@@ -335,6 +432,59 @@ def on_move_out(doc, method=None):
         f"Security Deposit Settlement <b>{settlement.name}</b> drafted.",
         indicator="blue", alert=True,
     )
+
+
+def _create_make_ready_work_order(move_out):
+    property_name = frappe.db.get_value("Unit", move_out.unit, "property")
+    frappe.get_doc({
+        "doctype": "Work Order",
+        "property": property_name,
+        "unit": move_out.unit,
+        "priority": "Medium",
+        "description": f"Make-ready cleaning/repairs after move-out ({move_out.name})",
+        "is_make_ready": 1,
+    }).insert(ignore_permissions=True)
+
+
+def _suggest_deductions_from_inspection_diff(move_out):
+    """Compare this Move Out's condition checklist against the matching
+    Move In (same lease + unit) and suggest a deduction row (amount left
+    at 0, for staff to fill in) for every item whose condition got worse.
+    Never auto-approved — the Settlement stays a draft the Property
+    Manager reviews and edits before submitting."""
+    move_ins = frappe.get_all(
+        "Move In",
+        filters={"lease": move_out.lease, "unit": move_out.unit, "docstatus": 1},
+        order_by="creation desc",
+        limit=1,
+        pluck="name",
+    )
+    if not move_ins:
+        return []
+    move_in_name = move_ins[0]
+
+    condition_rank = {"Good": 0, "Fair": 1, "Damaged": 2, "Missing": 3}
+    move_in_items = {
+        row.item: row
+        for row in frappe.get_all(
+            "Move In Checklist Item",
+            filters={"parent": move_in_name, "parenttype": "Move In"},
+            fields=["item", "condition"],
+        )
+    }
+
+    suggestions = []
+    for row in move_out.condition_checklist or []:
+        before = move_in_items.get(row.item)
+        if not before:
+            continue
+        if condition_rank.get(row.condition, 0) > condition_rank.get(before.condition, 0):
+            suggestions.append({
+                "reason": f"{row.item}: {before.condition} at move-in -> {row.condition} at move-out",
+                "deduction_type": "Damage",
+                "amount": 0,
+            })
+    return suggestions
 
 
 def get_deposit_liability_account(company=None):
@@ -414,12 +564,34 @@ def settle_security_deposit(settlement):
         pe.submit()
         settlement.db_set("payment_entry", pe.name)
     elif flt(settlement.refund_amount) < 0:
+        shortfall = -flt(settlement.refund_amount)
+        cost_center = frappe.db.get_value("Property", lease.building, "cost_center")
+        si = frappe.get_doc({
+            "doctype": "Sales Invoice",
+            "customer": lease.customer,
+            "posting_date": frappe.utils.today(),
+            "due_date": frappe.utils.today(),
+            "ignore_pricing_rule": 1,
+            "items": [{
+                "item_code": ensure_item(DEPOSIT_ITEM),
+                "qty": 1,
+                "uom": "Nos",
+                "rate": shortfall,
+                "cost_center": cost_center,
+                "description": f"Deposit shortfall — Lease {lease.name} ({settlement.name})",
+            }],
+            "remarks": f"Deposit deductions exceeded the deposit held for Lease {lease.name}.",
+        })
+        si.insert(ignore_permissions=True)
+        settlement.db_set("shortfall_invoice", si.name)
+        email_invoice_to_tenant(si.name)
         frappe.msgprint(
-            f"Deductions exceed the deposit by "
-            f"{frappe.format_value(-flt(settlement.refund_amount), {'fieldtype': 'Currency'})}. "
-            f"No automatic payment created — follow up manually for collection.",
+            f"Deductions exceed the deposit by {frappe.format_value(shortfall, {'fieldtype': 'Currency'})}. "
+            f"Shortfall invoice <b>{si.name}</b> raised against the tenant.",
             indicator="orange", alert=True,
         )
+
+    frappe.db.set_value("Lease Agreement", lease.name, "status", "Terminated")
 
 
 def create_vendor_bill(work_order):
@@ -457,6 +629,49 @@ def create_vendor_bill(work_order):
     return pi.name
 
 
+def create_tenant_recharge_invoice(work_order):
+    """Bill the current tenant of a Work Order's unit directly (e.g.
+    tenant-caused damage) instead of charging the owner."""
+    customer = frappe.db.sql("""
+        SELECT la.customer
+        FROM `tabLease Agreement` la
+        INNER JOIN `tabLease Agreement Unit` lau ON lau.parent = la.name
+        WHERE lau.unit_id = %s AND la.docstatus = 1 AND la.status IN ('Active', 'Notice Given')
+        LIMIT 1
+    """, work_order.unit)
+    if not customer or not customer[0][0]:
+        frappe.throw(
+            f"No active tenant found for unit <b>{work_order.unit}</b> to recharge."
+        )
+
+    cost_center = frappe.db.get_value("Property", work_order.property, "cost_center")
+    si = frappe.get_doc({
+        "doctype": "Sales Invoice",
+        "customer": customer[0][0],
+        "posting_date": frappe.utils.today(),
+        "due_date": frappe.utils.today(),
+        "ignore_pricing_rule": 1,
+        "items": [{
+            "item_code": ensure_item("Maintenance Recharge", item_group="Services"),
+            "qty": 1,
+            "uom": "Nos",
+            "rate": flt(work_order.actual_cost),
+            "cost_center": cost_center,
+            "description": f"Maintenance recharge — Work Order {work_order.name}: {work_order.description or ''}",
+        }],
+        "remarks": f"Tenant recharge for Work Order: {work_order.name}",
+    })
+    si.insert(ignore_permissions=True)
+    work_order.db_set("sales_invoice", si.name)
+    email_invoice_to_tenant(si.name)
+
+    frappe.msgprint(
+        f"Tenant recharge invoice <b>{si.name}</b> created for Work Order <b>{work_order.name}</b>.",
+        indicator="orange", alert=True,
+    )
+    return pi.name
+
+
 def on_payment_entry(doc, method=None):
     """Payment Entry hook — when rent invoices get paid (or payment is
     cancelled), refresh the linked Rent Schedule rows."""
@@ -478,3 +693,6 @@ def on_payment_entry(doc, method=None):
         status = "Paid" if outstanding <= 0 else "Invoiced"
         for row_name in rows:
             frappe.db.set_value("Rent Schedule", row_name, "status", status)
+
+        if doc.docstatus == 1 and status == "Paid":
+            send_payment_receipt(doc.name)

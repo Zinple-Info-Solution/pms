@@ -66,6 +66,27 @@ def populate_owner_statement(statement):
     statement.gross_income = sum(flt(r.amount) for r in income_rows)
     statement.gross_expense = sum(flt(r.amount) for r in expense_rows)
 
+    # A property can have multiple owners (Property Owner child table, each
+    # with their own share_percent). This statement is for ONE owner, so
+    # gross_income/gross_expense (the full property totals, kept above for
+    # audit context) must be prorated by that owner's share before any fee
+    # or distribution math runs on them — otherwise every co-owner would
+    # see a statement for 100% of the property.
+    share_percent = frappe.db.get_value(
+        "Property Owner",
+        {"parenttype": "Property", "parent": property_doc.name, "owner_id": statement.owner_id},
+        "share_percent",
+    )
+    if share_percent is None:
+        frappe.throw(
+            f"Owner <b>{statement.owner_id}</b> is not listed in "
+            f"Property <b>{property_doc.name}</b>'s Owners table."
+        )
+    statement.share_percent = share_percent
+
+    statement.owner_share_income = flt(statement.gross_income) * flt(share_percent) / 100
+    statement.owner_share_expense = flt(statement.gross_expense) * flt(share_percent) / 100
+
     agreement = frappe.db.get_value(
         "Management Agreement",
         {"property": property_doc.name, "owner_id": statement.owner_id},
@@ -74,7 +95,7 @@ def populate_owner_statement(statement):
     )
     if agreement:
         if agreement.fee_type == "Percent of Collected Rent":
-            statement.management_fee = flt(statement.gross_income) * flt(agreement.fee_percent) / 100
+            statement.management_fee = flt(statement.owner_share_income) * flt(agreement.fee_percent) / 100
         else:
             statement.management_fee = flt(agreement.fee_amount)
         statement.reserve_held = flt(agreement.reserve_amount)
@@ -83,8 +104,8 @@ def populate_owner_statement(statement):
         statement.reserve_held = 0
 
     statement.net_distributable = (
-        flt(statement.gross_income)
-        - flt(statement.gross_expense)
+        flt(statement.owner_share_income)
+        - flt(statement.owner_share_expense)
         - flt(statement.management_fee)
         - flt(statement.reserve_held)
     )

@@ -43,9 +43,14 @@ doc_events = {
 # Scheduled Tasks
 # ------------------------------------------------------------------
 scheduler_events = {
+    "hourly": [
+        "pms.pms.maintenance.escalate_overdue_work_orders",
+    ],
     "daily": [
         "pms.pms.tasks.check_lease_expiry",
         "pms.pms.tasks.send_lease_expiry_reminders",
+        "pms.pms.tasks.send_signature_reminders",
+        "pms.pms.tasks.send_renewal_offers",
         "pms.pms.tasks.apply_rent_escalations",
         "pms.pms.billing.generate_due_invoices",
         "pms.pms.billing.apply_late_fees",

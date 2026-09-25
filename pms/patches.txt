@@ -22,3 +22,6 @@ pms.patches.v2_5.backfill_management_agreement
 pms.patches.v2_5.backfill_cost_center_on_historical_invoices
 pms.patches.v2_6.create_rental_application_workflow
 pms.patches.v2_7.create_portal_roles_and_permissions
+pms.patches.v2_8.add_owner_approval_to_work_order_workflow
+pms.patches.v2_9.create_property_lead_web_form
+pms.patches.v2_9.create_lead_assignment_rule

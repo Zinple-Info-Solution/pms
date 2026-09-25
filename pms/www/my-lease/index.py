@@ -38,10 +38,19 @@ def get_context(context):
     maintenance_requests = frappe.get_all(
         "Maintenance Request",
         filters={"tenant": tenant},
-        fields=["name", "subject", "status", "priority", "request_date"],
+        fields=["name", "subject", "status", "priority", "request_date", "work_order"],
         order_by="request_date desc",
         limit_page_length=10,
     )
     context.maintenance_requests = maintenance_requests
+
+    work_order_names = [m.work_order for m in maintenance_requests if m.work_order]
+    context.confirmable_work_orders = []
+    if work_order_names:
+        context.confirmable_work_orders = frappe.get_all(
+            "Work Order",
+            filters={"name": ["in", work_order_names], "status": ["in", ["Completed", "Closed"]], "tenant_confirmed": 0},
+            pluck="name",
+        )
 
     return context

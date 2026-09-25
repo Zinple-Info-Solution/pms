@@ -1,6 +1,7 @@
 # Copyright (c) 2026, admin and contributors
 import frappe
 from frappe.model.document import Document
+from pms.pms.doctype.unit.unit import sync_unit_listing
 
 
 class MoveOut(Document):
@@ -18,6 +19,18 @@ class MoveOut(Document):
             frappe.throw(
                 f"Unit <b>{self.unit}</b> is not part of Lease Agreement <b>{self.lease}</b>."
             )
+
+    def on_update(self):
+        """Notice is given the moment this draft exists with a notice_date
+        (before the actual move-out submission) — mark the lease and put
+        the unit back on the market immediately, even though the tenant
+        is still living there."""
+        if self.docstatus == 0 and self.notice_date:
+            frappe.db.set_value("Lease Agreement", self.lease, "status", "Notice Given")
+            unit_status = frappe.db.get_value("Unit", self.unit, "status")
+            if unit_status == "Occupied":
+                frappe.db.set_value("Unit", self.unit, "status", "Notice Given")
+                sync_unit_listing(self.unit, "Notice Given")
 
     def on_cancel(self):
         if self.settlement and frappe.db.get_value("Security Deposit Settlement", self.settlement, "docstatus") == 0:
