@@ -17,3 +17,6 @@ pms.patches.v2_2.create_deposit_liability_account
 pms.patches.v2_3.create_work_order_workflow
 pms.patches.v2_3.migrate_open_maintenance_requests
 pms.patches.v2_4.create_default_late_fee_rule
+pms.patches.v2_5.backfill_property_cost_centers
+pms.patches.v2_5.backfill_management_agreement
+pms.patches.v2_5.backfill_cost_center_on_historical_invoices

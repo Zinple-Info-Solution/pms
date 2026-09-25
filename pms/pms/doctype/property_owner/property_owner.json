@@ -5,9 +5,9 @@
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
- "field_order": ["owner", "share_percent", "is_primary"],
+ "field_order": ["owner_id", "share_percent", "is_primary"],
  "fields": [
-  {"fieldname": "owner", "fieldtype": "Link", "in_list_view": 1, "label": "Owner", "options": "Owner", "reqd": 1},
+  {"fieldname": "owner_id", "fieldtype": "Link", "in_list_view": 1, "label": "Owner", "options": "Owner", "reqd": 1},
   {"fieldname": "share_percent", "fieldtype": "Percent", "in_list_view": 1, "label": "Share %"},
   {"default": "0", "fieldname": "is_primary", "fieldtype": "Check", "in_list_view": 1, "label": "Primary Owner"}
  ],

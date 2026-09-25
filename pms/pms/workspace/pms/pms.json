@@ -111,6 +111,36 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Management Agreement",
+   "link_count": 0,
+   "link_to": "Management Agreement",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Owner Statement",
+   "link_count": 0,
+   "link_to": "Owner Statement",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Owner Distribution",
+   "link_count": 0,
+   "link_to": "Owner Distribution",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Visitor Log",
    "link_count": 0,
    "link_to": "Visitor",

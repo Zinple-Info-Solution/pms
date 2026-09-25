@@ -60,6 +60,7 @@ def make_rent_invoice(lease_name, schedule_row=None):
 
     monthly_rent = flt(lease.rent_amount) or flt(lease.total_rent)
     months = flt(row.rent_amount) / monthly_rent if monthly_rent else 1
+    cost_center = frappe.db.get_value("Property", lease.building, "cost_center")
 
     # --- Build items ---
     items = []
@@ -81,6 +82,7 @@ def make_rent_invoice(lease_name, schedule_row=None):
                 f"{len(lease.units)} unit(s)",
             ])),
             "custom_lease_agreement": lease.name,
+            "cost_center": cost_center,
         })
         return_items_built = True
     else:
@@ -105,6 +107,7 @@ def make_rent_invoice(lease_name, schedule_row=None):
             "custom_floor_no": unit.floor_no or 0,
             "custom_unit": unit.unit_id or "",
             "custom_area_sqft": unit.area_sqft or 0,
+            "cost_center": cost_center,
         })
 
     # --- Facility charges: one line per facility -------------------------
@@ -140,6 +143,7 @@ def make_rent_invoice(lease_name, schedule_row=None):
                 fac.remarks or "",
             ])),
             "custom_lease_agreement": lease.name,
+            "cost_center": cost_center,
         })
 
     # --- Remaining additional charges as one line ------------------------
@@ -156,6 +160,7 @@ def make_rent_invoice(lease_name, schedule_row=None):
             "rate": other_charges,
             "description": f"{charge_names} — {row.billing_period}",
             "custom_lease_agreement": lease.name,
+            "cost_center": cost_center,
         })
 
     si = frappe.get_doc({

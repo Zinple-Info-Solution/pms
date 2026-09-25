@@ -7,7 +7,44 @@ class Property(Document):
 
     def on_update(self):
         self.ensure_location_exists()
+        self.ensure_cost_center()
         self.sync_units()
+
+    def ensure_cost_center(self):
+        """Auto-create a Cost Center for this Property if one isn't set, so
+        rent invoices / vendor bills / owner statements can be scoped to it
+        without manual accounting setup."""
+        if self.cost_center:
+            return
+
+        company = frappe.db.get_single_value("Global Defaults", "default_company")
+        if not company:
+            return
+
+        abbr = frappe.get_cached_value("Company", company, "abbr")
+        cost_center_name = f"{self.building_name} - {abbr}"
+
+        if not frappe.db.exists("Cost Center", cost_center_name):
+            root = frappe.db.get_value(
+                "Cost Center",
+                {"company": company, "is_group": 1, "parent_cost_center": ["is", "not set"]},
+                "name",
+            )
+            if not root:
+                return
+            try:
+                frappe.get_doc({
+                    "doctype": "Cost Center",
+                    "cost_center_name": self.building_name,
+                    "company": company,
+                    "parent_cost_center": root,
+                    "is_group": 0,
+                }).insert(ignore_permissions=True)
+            except Exception as e:
+                frappe.log_error(str(e), "PMS Cost Center Creation Error")
+                return
+
+        self.db_set("cost_center", cost_center_name)
 
     def ensure_location_exists(self):
         """Create a Location for this Property if not exists (used by real
