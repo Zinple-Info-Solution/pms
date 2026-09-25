@@ -186,6 +186,10 @@
    "report": 1,
    "role": "Property Manager",
    "share": 1
+  },
+  {
+   "read": 1,
+   "role": "Owner"
   }
  ],
  "row_format": "Dynamic",

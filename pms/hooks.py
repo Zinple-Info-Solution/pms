@@ -15,6 +15,12 @@ website_redirects = [
     {"source": "/pms-dashboard", "target": "/app/pms-dashboard"},
 ]
 
+standard_portal_menu_items = [
+    {"title": "My Lease", "route": "/my-lease", "reference_doctype": "Lease Agreement", "role": "Tenant"},
+    {"title": "My Properties", "route": "/my-property", "reference_doctype": "Owner Statement", "role": "Owner"},
+    {"title": "My Work Orders", "route": "/my-work-orders", "reference_doctype": "Work Order", "role": "Vendor"},
+]
+
 # ------------------------------------------------------------------
 # Document Events — keep Rent Schedule in sync with invoice payments
 # ------------------------------------------------------------------

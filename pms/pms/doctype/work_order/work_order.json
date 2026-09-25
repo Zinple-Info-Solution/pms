@@ -209,6 +209,10 @@
    "report": 1,
    "role": "Accountant",
    "share": 1
+  },
+  {
+   "read": 1,
+   "role": "Vendor"
   }
  ],
  "row_format": "Dynamic",

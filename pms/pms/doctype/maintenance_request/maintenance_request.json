@@ -214,6 +214,11 @@
    "role": "Maintenance Staff",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Tenant"
   }
  ],
  "row_format": "Dynamic",
