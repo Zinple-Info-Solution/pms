@@ -10,3 +10,6 @@ pms.patches.v1_0.set_facility_charge_defaults
 pms.patches.v2_0.create_unit_and_migrate_assets
 pms.patches.v2_0.repoint_maintenance_request_tenant
 pms.patches.v2_0.flag_properties_without_owner
+pms.patches.v2_1.verify_lease_unit_links
+pms.patches.v2_1.flag_unresolved_sales_invoice_item_unit_type
+pms.patches.v2_1.remove_stale_custom_unit_no

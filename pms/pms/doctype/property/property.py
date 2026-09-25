@@ -70,7 +70,6 @@ class Property(Document):
                 )
 
         if total_created:
-            frappe.db.commit()
             frappe.msgprint(
                 f"✅ {total_created} new unit(s) created for <b>{self.building_name}</b>.",
                 indicator="green", alert=True,

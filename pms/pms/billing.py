@@ -93,7 +93,6 @@ def make_rent_invoice(lease_name, schedule_row=None):
             "qty": months or 1,
             "uom": "Nos",
             "rate": rate,
-            "asset": unit.unit_id or "",
             "description": " | ".join(filter(None, [
                 f"Rent {row.billing_period}",
                 f"Unit: {unit.unit_id}" if unit.unit_id else "",
@@ -104,7 +103,7 @@ def make_rent_invoice(lease_name, schedule_row=None):
             "custom_lease_agreement": lease.name,
             "custom_unit_type": unit.unit_type or "",
             "custom_floor_no": unit.floor_no or 0,
-            "custom_unit_no": unit.unit_id or 0,
+            "custom_unit": unit.unit_id or "",
             "custom_area_sqft": unit.area_sqft or 0,
         })
 
@@ -133,7 +132,7 @@ def make_rent_invoice(lease_name, schedule_row=None):
             "qty": qty,
             "uom": "Nos",
             "rate": rate,
-            "asset": fac.unit or "",
+            "custom_unit": fac.unit or "",
             "description": " | ".join(filter(None, [
                 f"Facility: {fac.facility} ({kind})",
                 f"Unit: {fac.unit}" if fac.unit else "",

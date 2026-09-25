@@ -19,7 +19,7 @@ class TestProperty(FrappeTestCase):
 			],
 		})
 		property_doc.insert()
-		self.addCleanup(lambda: frappe.delete_doc("Property", property_doc.name, force=True))
+		self.addCleanup(lambda: cleanup_property_and_units(property_doc.name))
 
 		units = frappe.get_all("Unit", filters={"property": property_doc.name})
 		self.assertEqual(len(units), 2)
@@ -37,10 +37,16 @@ class TestProperty(FrappeTestCase):
 			],
 		})
 		property_doc.insert()
-		self.addCleanup(lambda: frappe.delete_doc("Property", property_doc.name, force=True))
+		self.addCleanup(lambda: cleanup_property_and_units(property_doc.name))
 
 		property_doc.units[0].unit_no = 1
 		property_doc.save()
 
 		units = frappe.get_all("Unit", filters={"property": property_doc.name})
 		self.assertEqual(len(units), 2)
+
+
+def cleanup_property_and_units(property_name):
+	for unit_name in frappe.get_all("Unit", filters={"property": property_name}, pluck="name"):
+		frappe.delete_doc("Unit", unit_name, force=True, ignore_permissions=True)
+	frappe.delete_doc("Property", property_name, force=True, ignore_permissions=True)
