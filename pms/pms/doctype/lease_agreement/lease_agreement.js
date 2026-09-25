@@ -64,7 +64,7 @@ frappe.ui.form.on('Lease Agreement', {
     lease_based_on(frm) {
         if (frm.doc.lease_based_on === "Whole Building") {
             if (!frm.doc.building) {
-                frappe.msgprint(__("Select a Building first."));
+                frappe.msgprint(__("Select a Property first."));
                 frm.set_value("lease_based_on", "Selected Units");
                 frm.set_value("billing_based_on", "Asset Wise");
                 return;
@@ -73,23 +73,21 @@ frappe.ui.form.on('Lease Agreement', {
             frappe.call({
                 method: "frappe.client.get_list",
                 args: {
-                    doctype: "Asset",
+                    doctype: "Unit",
                     filters: {
-                        custom_building       : frm.doc.building,
-                        custom_created_by_pms : 1,
-                        docstatus             : 1
+                        property: frm.doc.building
                     },
                     fields: [
-                        "name", "custom_unit_type", "custom_unit_category",
-                        "custom_floor_no", "custom_area_sqft",
-                        "custom_monthly_rent", "custom_occupancy_status"
+                        "name", "unit_type", "unit_template",
+                        "floor_no", "area_sqft",
+                        "monthly_rent", "status"
                     ],
                     limit: 500
                 },
                 callback(r) {
                     const units    = r.message || [];
                     const occupied = units.filter(
-                        u => u.custom_occupancy_status === "Occupied");
+                        u => u.status === "Occupied");
                     if (occupied.length) {
                         frappe.msgprint({
                             title    : __("Units Occupied"),
@@ -105,11 +103,11 @@ frappe.ui.form.on('Lease Agreement', {
                     units.forEach(u => {
                         frm.add_child("units", {
                             unit_id      : u.name,
-                            unit_type    : u.custom_unit_type,
-                            unit_category: u.custom_unit_category,
-                            floor_no     : u.custom_floor_no,
-                            area_sqft    : u.custom_area_sqft,
-                            monthly_rent : u.custom_monthly_rent
+                            unit_type    : u.unit_type,
+                            unit_category: u.unit_template,
+                            floor_no     : u.floor_no,
+                            area_sqft    : u.area_sqft,
+                            monthly_rent : u.monthly_rent
                         });
                     });
                     frm.refresh_field("units");
@@ -164,33 +162,26 @@ frappe.ui.form.on('Lease Agreement', {
                 return;
             }
 
-            // Fetch Vacant Assets filtered by building
+            // Fetch Vacant Units filtered by property
             frappe.call({
                 method: 'frappe.client.get_list',
                 args: {
-                    doctype: 'Asset',
+                    doctype: 'Unit',
                     filters: {
-                        custom_occupancy_status : 'Vacent',
-                        custom_building         : frm.doc.building,
-                        custom_created_by_pms   : 1,
-                        docstatus               : 1
+                        status  : 'Vacant',
+                        property: frm.doc.building
                     },
                     fields: [
                         'name',
-                        'asset_name',
-                        'asset_category',
-                        'custom_property_name',
-                        'custom_building',
-                        'custom_building_unit_row',
-                        'custom_unit_type',
-                        'custom_unit_category',
-                        'custom_area_sqft',
-                        'custom_bedrooms',
-                        'custom_bathrooms',
-                        'custom_monthly_rent',
-                        'custom_floor_no',
-                        'custom_occupancy_status',
-                        'gross_purchase_amount'
+                        'property',
+                        'unit_type',
+                        'unit_template',
+                        'area_sqft',
+                        'bedrooms',
+                        'bathrooms',
+                        'monthly_rent',
+                        'floor_no',
+                        'status'
                     ],
                     limit: 100
                 },
@@ -221,15 +212,14 @@ frappe.ui.form.on('Lease Agreement', {
                                 <input type="radio" name="unit_select" value="${index}">
                             </td>
                             <td style="padding:8px; border:1px solid #ddd;">${unit.name || ''}</td>
-                            <td style="padding:8px; border:1px solid #ddd;">${unit.custom_property_name || ''}</td>
-                            <td style="padding:8px; border:1px solid #ddd;">${unit.custom_building || ''}</td>
-                            <td style="padding:8px; border:1px solid #ddd;">${unit.custom_floor_no || ''}</td>
-                            <td style="padding:8px; border:1px solid #ddd;">${unit.custom_unit_type || ''}</td>
-                            <td style="padding:8px; border:1px solid #ddd;">${unit.custom_unit_category || ''}</td>
-                            <td style="padding:8px; border:1px solid #ddd;">${unit.custom_area_sqft || ''} sq.ft</td>
-                            <td style="padding:8px; border:1px solid #ddd;">${unit.custom_bedrooms || 0} Bed / ${unit.custom_bathrooms || 0} Bath</td>
+                            <td style="padding:8px; border:1px solid #ddd;">${unit.property || ''}</td>
+                            <td style="padding:8px; border:1px solid #ddd;">${unit.floor_no || ''}</td>
+                            <td style="padding:8px; border:1px solid #ddd;">${unit.unit_type || ''}</td>
+                            <td style="padding:8px; border:1px solid #ddd;">${unit.unit_template || ''}</td>
+                            <td style="padding:8px; border:1px solid #ddd;">${unit.area_sqft || ''} sq.ft</td>
+                            <td style="padding:8px; border:1px solid #ddd;">${unit.bedrooms || 0} Bed / ${unit.bathrooms || 0} Bath</td>
                             <td style="padding:8px; border:1px solid #ddd; color:green; font-weight:bold;">
-                                ${frappe.format(unit.custom_monthly_rent, {fieldtype: 'Currency'})}
+                                ${frappe.format(unit.monthly_rent, {fieldtype: 'Currency'})}
                             </td>
                             <td style="padding:8px; border:1px solid #ddd;">
                                 <span style="background:#28a745; color:white; padding:2px 8px;
@@ -240,7 +230,7 @@ frappe.ui.form.on('Lease Agreement', {
 
                     let units_html = `
                         <p style="margin-bottom:8px; color:#555; font-size:12px;">
-                            🔍 Showing vacant units in Building: <b>${frm.doc.building}</b>
+                            🔍 Showing vacant units in Property: <b>${frm.doc.building}</b>
                             — Total: <b>${units.length}</b> unit(s)
                         </p>
                         <div style="overflow-x:auto; max-height:300px; overflow-y:auto;">
@@ -248,12 +238,11 @@ frappe.ui.form.on('Lease Agreement', {
                                 <thead>
                                     <tr style="background:#f2f2f2; position:sticky; top:0;">
                                         <th style="padding:8px; border:1px solid #ddd;">Select</th>
-                                        <th style="padding:8px; border:1px solid #ddd;">Asset ID</th>
+                                        <th style="padding:8px; border:1px solid #ddd;">Unit ID</th>
                                         <th style="padding:8px; border:1px solid #ddd;">Property</th>
-                                        <th style="padding:8px; border:1px solid #ddd;">Building</th>
                                         <th style="padding:8px; border:1px solid #ddd;">Floor</th>
                                         <th style="padding:8px; border:1px solid #ddd;">Type</th>
-                                        <th style="padding:8px; border:1px solid #ddd;">Category</th>
+                                        <th style="padding:8px; border:1px solid #ddd;">Template</th>
                                         <th style="padding:8px; border:1px solid #ddd;">Area</th>
                                         <th style="padding:8px; border:1px solid #ddd;">Rooms</th>
                                         <th style="padding:8px; border:1px solid #ddd;">Monthly Rent</th>
@@ -336,27 +325,27 @@ frappe.ui.form.on('Lease Agreement', {
                             // Update main form fields
                             frm.set_value('start_date', values.start_date);
                             frm.set_value('end_date', values.end_date);
-                            frm.set_value('building', selected_unit.custom_building);
-                            frm.set_value('rent_amount', selected_unit.custom_monthly_rent);
-                            frm.set_value('floor', selected_unit.custom_floor_no || '');
+                            frm.set_value('building', selected_unit.property);
+                            frm.set_value('rent_amount', selected_unit.monthly_rent);
+                            frm.set_value('floor', selected_unit.floor_no || '');
 
                             // Clear existing units child table
                             frm.clear_table('units');
 
-                            // Add selected asset to child table
+                            // Add selected unit to child table
                             let child = frm.add_child('units');
                             frappe.model.set_value(child.doctype, child.name, {
-                                'unit_type'    : selected_unit.custom_unit_type     || '',
-                                'unit_category': selected_unit.custom_unit_category || '',
-                                'floor_no'     : selected_unit.custom_floor_no      || '',
-                                'unit_id'      : selected_unit.name                 || '',
-                                'area_sqft'    : selected_unit.custom_area_sqft     || 0,
-                                'monthly_rent' : selected_unit.custom_monthly_rent  || 0
+                                'unit_type'    : selected_unit.unit_type     || '',
+                                'unit_category': selected_unit.unit_template || '',
+                                'floor_no'     : selected_unit.floor_no      || '',
+                                'unit_id'      : selected_unit.name          || '',
+                                'area_sqft'    : selected_unit.area_sqft     || 0,
+                                'monthly_rent' : selected_unit.monthly_rent  || 0
                             });
 
                             frm.refresh_field('units');
 
-                            // Pull the facilities ticked on that unit's Asset
+                            // Pull the facilities ticked on that unit
                             fetch_facilities(frm, false);
 
                             frappe.show_alert({
@@ -393,11 +382,10 @@ frappe.ui.form.on('Lease Agreement', {
 
                         $('#selected-unit-info').html(`
                             ✅ <b>Selected:</b> ${selected_unit.name} —
-                            ${selected_unit.custom_property_name || ''} |
-                            ${selected_unit.custom_building || ''} |
-                            Floor: ${selected_unit.custom_floor_no || ''} |
-                            ${selected_unit.custom_unit_type || ''} |
-                            ${frappe.format(selected_unit.custom_monthly_rent, {fieldtype: 'Currency'})}
+                            ${selected_unit.property || ''} |
+                            Floor: ${selected_unit.floor_no || ''} |
+                            ${selected_unit.unit_type || ''} |
+                            ${frappe.format(selected_unit.monthly_rent, {fieldtype: 'Currency'})}
                         `).css('color', '#28a745');
                     };
                 }
@@ -537,7 +525,7 @@ function fetch_facilities(frm, show_message) {
                 } else {
                     frappe.msgprint({
                         title    : __('No Facilities'),
-                        message  : __('None of the selected units have a ticked facility. Open the unit Asset, tick the facilities under <b>Property Facility</b> and set an amount.'),
+                        message  : __('None of the selected units have a ticked facility. Open the Unit, tick the facilities under <b>Facilities</b> and set an amount.'),
                         indicator: 'orange'
                     });
                 }

@@ -3,6 +3,7 @@
 
 import frappe
 from frappe.utils import today, add_days, date_diff, getdate
+from pms.pms.doctype.lease_agreement.lease_agreement import log_occupancy_event
 
 
 def check_lease_expiry():
@@ -10,7 +11,7 @@ def check_lease_expiry():
     Runs daily.
     Finds Active, submitted Lease Agreements whose end_date has passed:
       1. Sets their status to 'Expired'
-      2. Releases their Assets back to 'Vacent'
+      2. Releases their Units back to 'Vacant'
       3. Creates a Notification Log for the lease owner
     """
     expired_leases = frappe.get_all(
@@ -30,18 +31,19 @@ def check_lease_expiry():
             # 1. Mark lease Expired
             doc.db_set("status", "Expired")
 
-            # 2. Release assets back to Vacant
+            # 2. Release units back to Vacant
             for row in doc.units or []:
-                if row.unit_id and frappe.db.exists("Asset", row.unit_id):
+                if row.unit_id and frappe.db.exists("Unit", row.unit_id):
                     frappe.db.set_value(
-                        "Asset",
+                        "Unit",
                         row.unit_id,
                         {
-                            "custom_occupancy_status": "Vacent",
-                            "custom_start_date": None,
-                            "custom_end_date": None,
+                            "status": "Vacant",
+                            "current_occupant_start_date": None,
+                            "current_occupant_end_date": None,
                         },
                     )
+                    log_occupancy_event(row.unit_id, "Vacated", lease=doc.name)
 
             # 3. Notify the owner in-app
             frappe.get_doc({

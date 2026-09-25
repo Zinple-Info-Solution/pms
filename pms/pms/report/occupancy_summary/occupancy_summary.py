@@ -14,9 +14,9 @@ def get_columns():
     return [
         {
             "fieldname": "building",
-            "label": "Building",
+            "label": "Property",
             "fieldtype": "Link",
-            "options": "Building",
+            "options": "Property",
             "width": 200,
         },
         {"fieldname": "total_units", "label": "Total Units", "fieldtype": "Int", "width": 110},

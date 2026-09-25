@@ -1,7 +1,7 @@
 // Copyright (c) 2026, admin and contributors
 // For license information, please see license.txt
 
-// frappe.ui.form.on("Building", {
+// frappe.ui.form.on("Property", {
 // 	refresh(frm) {
 
 // 	},
@@ -17,7 +17,7 @@ frappe.ui.form.on('Units', {
     }
 });
 
-frappe.ui.form.on('Building', {
+frappe.ui.form.on('Property', {
     setup(frm) {
         frm.fields_dict.units.grid.get_field('unit_category').get_query = function(doc, cdt, cdn) {
             let row = locals[cdt][cdn];

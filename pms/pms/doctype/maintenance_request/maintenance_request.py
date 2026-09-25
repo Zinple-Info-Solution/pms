@@ -21,11 +21,11 @@ class MaintenanceRequest(Document):
         if not (self.unit and self.building):
             return
 
-        asset_building = frappe.db.get_value("Asset", self.unit, "custom_building")
-        if asset_building and asset_building != self.building:
+        unit_property = frappe.db.get_value("Unit", self.unit, "property")
+        if unit_property and unit_property != self.building:
             frappe.throw(
-                f"Unit <b>{self.unit}</b> belongs to building "
-                f"<b>{asset_building}</b>, not <b>{self.building}</b>."
+                f"Unit <b>{self.unit}</b> belongs to property "
+                f"<b>{unit_property}</b>, not <b>{self.building}</b>."
             )
 
     def set_resolution_timestamp(self):

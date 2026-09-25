@@ -68,8 +68,8 @@
    "fieldname": "building",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Building",
-   "options": "Building",
+   "label": "Property",
+   "options": "Property",
    "reqd": 1
   },
   {

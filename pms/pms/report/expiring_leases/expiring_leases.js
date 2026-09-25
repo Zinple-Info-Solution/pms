@@ -9,9 +9,9 @@ frappe.query_reports["Expiring Leases"] = {
         },
         {
             fieldname: "building",
-            label: __("Building"),
+            label: __("Property"),
             fieldtype: "Link",
-            options: "Building"
+            options: "Property"
         }
     ],
     formatter: function (value, row, column, data, default_formatter) {

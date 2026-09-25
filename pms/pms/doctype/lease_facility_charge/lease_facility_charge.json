@@ -31,8 +31,8 @@
    "fieldname": "unit",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Unit (Asset)",
-   "options": "Asset"
+   "label": "Unit",
+   "options": "Unit"
   },
   {
    "columns": 2,

@@ -17,10 +17,10 @@
   {
    "fieldname": "unit_id",
    "fieldtype": "Link",
-   "options": "Asset",
+   "options": "Unit",
    "in_list_view": 1,
    "in_preview": 1,
-   "label": "Unit (Asset)",
+   "label": "Unit",
    "reqd": 1
   },
   {

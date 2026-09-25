@@ -1,7 +1,7 @@
 // Copyright (c) 2026, admin and contributors
 frappe.query_reports["Rent Collection"] = {
     filters: [
-        { fieldname: "building", label: __("Building"), fieldtype: "Link", options: "Building" },
+        { fieldname: "building", label: __("Property"), fieldtype: "Link", options: "Property" },
         { fieldname: "tenant", label: __("Tenant"), fieldtype: "Link", options: "Tenant" },
         { fieldname: "status", label: __("Status"), fieldtype: "Select",
           options: "\nPending\nInvoiced\nPaid" }

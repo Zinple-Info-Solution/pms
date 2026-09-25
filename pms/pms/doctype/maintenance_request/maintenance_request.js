@@ -2,22 +2,22 @@
 frappe.ui.form.on('Maintenance Request', {
 
     setup(frm) {
-        // Only show PMS-created units of the selected building
+        // Only show units of the selected property
         frm.set_query('unit', () => {
-            let filters = { custom_created_by_pms: 1 };
+            let filters = {};
             if (frm.doc.building) {
-                filters.custom_building = frm.doc.building;
+                filters.property = frm.doc.building;
             }
             return { filters };
         });
     },
 
     building(frm) {
-        // Reset unit if it doesn't match the new building
+        // Reset unit if it doesn't match the new property
         if (frm.doc.unit && frm.doc.building) {
-            frappe.db.get_value('Asset', frm.doc.unit, 'custom_building')
+            frappe.db.get_value('Unit', frm.doc.unit, 'property')
                 .then(r => {
-                    if (r.message && r.message.custom_building !== frm.doc.building) {
+                    if (r.message && r.message.property !== frm.doc.building) {
                         frm.set_value('unit', null);
                     }
                 });

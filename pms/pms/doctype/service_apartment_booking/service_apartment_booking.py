@@ -4,6 +4,7 @@ from frappe.model.document import Document
 from frappe.utils import flt, getdate, date_diff, today
 
 from pms.pms.billing import ensure_item
+from pms.pms.doctype.lease_agreement.lease_agreement import log_occupancy_event
 
 
 class ServiceApartmentBooking(Document):
@@ -29,7 +30,7 @@ class ServiceApartmentBooking(Document):
 
     def set_default_rate(self):
         if not flt(self.rate_per_night) and self.unit:
-            monthly = frappe.db.get_value("Asset", self.unit, "custom_monthly_rent")
+            monthly = frappe.db.get_value("Unit", self.unit, "monthly_rent")
             if monthly:
                 self.rate_per_night = flt(monthly) / 30
 
@@ -82,15 +83,16 @@ class ServiceApartmentBooking(Document):
     def check_in_guest(self):
         if self.status != "Booked":
             frappe.throw(f"Cannot check in: booking is {self.status}.")
-        occ = frappe.db.get_value("Asset", self.unit, "custom_occupancy_status")
+        occ = frappe.db.get_value("Unit", self.unit, "status")
         if occ == "Occupied":
             frappe.throw(f"Unit <b>{self.unit}</b> is currently Occupied.")
 
-        frappe.db.set_value("Asset", self.unit, {
-            "custom_occupancy_status": "Occupied",
-            "custom_start_date": getdate(self.check_in),
-            "custom_end_date": getdate(self.check_out),
+        frappe.db.set_value("Unit", self.unit, {
+            "status": "Occupied",
+            "current_occupant_start_date": getdate(self.check_in),
+            "current_occupant_end_date": getdate(self.check_out),
         })
+        log_occupancy_event(self.unit, "Occupied", booking=self.name)
         self.db_set("status", "Checked In")
         frappe.msgprint("Guest checked in. Unit marked Occupied.",
                         indicator="green", alert=True)
@@ -129,7 +131,6 @@ class ServiceApartmentBooking(Document):
             "qty": self.no_of_nights or 1,
             "uom": "Nos",
             "rate": flt(self.rate_per_night),
-            "asset": self.unit,
             "description": (
                 f"Service apartment stay — Unit {self.unit}, "
                 f"{self.check_in} to {self.check_out} "
@@ -161,9 +162,10 @@ class ServiceApartmentBooking(Document):
         return si.name
 
     def _release_unit(self):
-        if self.unit and frappe.db.exists("Asset", self.unit):
-            frappe.db.set_value("Asset", self.unit, {
-                "custom_occupancy_status": "Vacent",
-                "custom_start_date": None,
-                "custom_end_date": None,
+        if self.unit and frappe.db.exists("Unit", self.unit):
+            frappe.db.set_value("Unit", self.unit, {
+                "status": "Vacant",
+                "current_occupant_start_date": None,
+                "current_occupant_end_date": None,
             })
+            log_occupancy_event(self.unit, "Vacated", booking=self.name)

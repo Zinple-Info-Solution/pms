@@ -3,8 +3,8 @@ frappe.ui.form.on('Service Apartment Booking', {
 
     setup(frm) {
         frm.set_query('unit', () => {
-            let filters = { custom_created_by_pms: 1, docstatus: 1 };
-            if (frm.doc.building) filters.custom_building = frm.doc.building;
+            let filters = {};
+            if (frm.doc.building) filters.property = frm.doc.building;
             return { filters };
         });
     },
@@ -49,11 +49,11 @@ frappe.ui.form.on('Service Apartment Booking', {
 
     unit(frm) {
         if (frm.doc.unit && !flt(frm.doc.rate_per_night)) {
-            frappe.db.get_value('Asset', frm.doc.unit, 'custom_monthly_rent')
+            frappe.db.get_value('Unit', frm.doc.unit, 'monthly_rent')
                 .then(r => {
-                    if (r.message && r.message.custom_monthly_rent) {
+                    if (r.message && r.message.monthly_rent) {
                         frm.set_value('rate_per_night',
-                            flt(r.message.custom_monthly_rent) / 30);
+                            flt(r.message.monthly_rent) / 30);
                     }
                 });
         }

@@ -26,9 +26,9 @@ def get_columns():
         },
         {
             "fieldname": "building",
-            "label": "Building",
+            "label": "Property",
             "fieldtype": "Link",
-            "options": "Building",
+            "options": "Property",
             "width": 150,
         },
         {"fieldname": "start_date", "label": "Start Date", "fieldtype": "Date", "width": 110},

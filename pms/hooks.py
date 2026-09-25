@@ -5,14 +5,6 @@ app_description = "pms"
 app_email = "admin@test.com"
 app_license = "mit"
 
-# NOTE:
-# lease_agreement.js / building.js / tenant.js live inside their own doctype
-# folders, so Frappe loads them automatically. doctype_js is ONLY needed for
-# JS that customizes doctypes from OTHER apps (like the core Asset doctype).
-doctype_js = {
-    "Asset": "public/js/asset.js",
-}
-
 # ------------------------------------------------------------------
 # The financial dashboard now lives inside the desk as a standard Page
 # (pms/pms/page/pms_dashboard  ->  /app/pms-dashboard).

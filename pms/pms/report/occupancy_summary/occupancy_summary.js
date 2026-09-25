@@ -3,9 +3,9 @@ frappe.query_reports["Occupancy Summary"] = {
     filters: [
         {
             fieldname: "building",
-            label: __("Building"),
+            label: __("Property"),
             fieldtype: "Link",
-            options: "Building"
+            options: "Property"
         }
     ]
 };

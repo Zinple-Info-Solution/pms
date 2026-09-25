@@ -24,11 +24,11 @@ class LeaseAgreement(Document):
             self.generate_rent_schedule()
 
     def on_submit(self):
-        self.update_assets()
+        self.update_units()
         self.update_status("Active")
 
     def on_cancel(self):
-        self.release_assets()
+        self.release_units()
         self.update_status("Terminated")
 
     # ------------------------------------------------------------
@@ -36,31 +36,26 @@ class LeaseAgreement(Document):
     # ------------------------------------------------------------
     def fill_whole_building_units(self):
         """Lease Based On = Whole Building:
-        replace the units table with EVERY unit of the building.
+        replace the units table with EVERY unit of the property.
         All units must be vacant (not held by another lease/booking)."""
         if not self.building:
-            frappe.throw("Please select a Building first.")
+            frappe.throw("Please select a Property first.")
 
         all_units = frappe.get_all(
-            "Asset",
-            filters={
-                "custom_building": self.building,
-                "custom_created_by_pms": 1,
-                "docstatus": 1,
-            },
+            "Unit",
+            filters={"property": self.building},
             fields=[
-                "name", "custom_unit_type", "custom_unit_category",
-                "custom_floor_no", "custom_area_sqft",
-                "custom_monthly_rent", "custom_occupancy_status",
+                "name", "unit_type", "unit_template",
+                "floor_no", "area_sqft",
+                "monthly_rent", "status",
             ],
         )
         if not all_units:
             frappe.throw(
-                f"No submitted units found for building <b>{self.building}</b>."
+                f"No units found for property <b>{self.building}</b>."
             )
 
-        occupied = [u.name for u in all_units
-                    if u.custom_occupancy_status == "Occupied"]
+        occupied = [u.name for u in all_units if u.status == "Occupied"]
         if occupied and self.docstatus == 0:
             frappe.throw(
                 "Cannot lease the whole building — these units are "
@@ -71,11 +66,11 @@ class LeaseAgreement(Document):
         for u in all_units:
             self.append("units", {
                 "unit_id": u.name,
-                "unit_type": u.custom_unit_type,
-                "unit_category": u.custom_unit_category,
-                "floor_no": u.custom_floor_no,
-                "area_sqft": u.custom_area_sqft,
-                "monthly_rent": u.custom_monthly_rent,
+                "unit_type": u.unit_type,
+                "unit_category": u.unit_template,
+                "floor_no": u.floor_no,
+                "area_sqft": u.area_sqft,
+                "monthly_rent": u.monthly_rent,
             })
 
     # ------------------------------------------------------------
@@ -97,29 +92,29 @@ class LeaseAgreement(Document):
                 )
             seen.add(row.unit_id)
 
-            asset_building = frappe.db.get_value("Asset", row.unit_id, "custom_building")
-            if self.building and asset_building and asset_building != self.building:
+            unit_property = frappe.db.get_value("Unit", row.unit_id, "property")
+            if self.building and unit_property and unit_property != self.building:
                 frappe.throw(
-                    f"Unit <b>{row.unit_id}</b> belongs to building "
-                    f"<b>{asset_building}</b>, not <b>{self.building}</b>."
+                    f"Unit <b>{row.unit_id}</b> belongs to property "
+                    f"<b>{unit_property}</b>, not <b>{self.building}</b>."
                 )
 
     # ------------------------------------------------------------
-    # Facility charges (pulled from each unit's Asset)
+    # Facility charges (pulled from each Unit)
     # ------------------------------------------------------------
     def get_unit_facilities(self):
         """Return every ticked facility of every unit on this lease.
 
-        Reads the `custom_property_facility` child table of each Asset and
-        keeps only the rows where the `value` checkbox is ticked. The amount
-        comes from the Asset row; if that is blank we fall back to the
-        `default_amount` of the Property Facility master."""
+        Reads the `facilities` child table of each Unit and keeps only the
+        rows where the `value` checkbox is ticked. The amount comes from the
+        Unit row; if that is blank we fall back to the `default_amount` of
+        the Property Facility master."""
         rows = []
         for unit in self.units or []:
-            if not unit.unit_id or not frappe.db.exists("Asset", unit.unit_id):
+            if not unit.unit_id or not frappe.db.exists("Unit", unit.unit_id):
                 continue
 
-            facilities = get_asset_facility_rows(unit.unit_id)
+            facilities = get_unit_facility_rows(unit.unit_id)
 
             for f in facilities:
                 if not f.facilities:
@@ -221,7 +216,7 @@ class LeaseAgreement(Document):
         for row in self.units or []:
             if row.unit_id and not flt(row.monthly_rent):
                 row.monthly_rent = frappe.db.get_value(
-                    "Asset", row.unit_id, "custom_monthly_rent"
+                    "Unit", row.unit_id, "monthly_rent"
                 ) or 0
             total += flt(row.monthly_rent)
 
@@ -313,9 +308,9 @@ class LeaseAgreement(Document):
         self.db_set("status", status)
 
     # ------------------------------------------------------------
-    # Asset occupancy
+    # Unit occupancy
     # ------------------------------------------------------------
-    def update_assets(self):
+    def update_units(self):
         if not self.units:
             frappe.throw("Please add at least one Unit before submitting.")
 
@@ -324,64 +319,78 @@ class LeaseAgreement(Document):
             if not unit_id:
                 continue
 
-            if not frappe.db.exists("Asset", unit_id):
-                frappe.throw(f"Asset <b>{unit_id}</b> not found.")
+            if not frappe.db.exists("Unit", unit_id):
+                frappe.throw(f"Unit <b>{unit_id}</b> not found.")
 
-            current_status = frappe.db.get_value(
-                "Asset", unit_id, "custom_occupancy_status"
-            )
+            current_status = frappe.db.get_value("Unit", unit_id, "status")
             if current_status == "Occupied":
                 frappe.throw(
-                    f"Asset <b>{unit_id}</b> is already Occupied. "
+                    f"Unit <b>{unit_id}</b> is already Occupied. "
                     f"Please select a different unit."
                 )
 
-            frappe.db.set_value("Asset", unit_id, {
-                "custom_occupancy_status": "Occupied",
-                "custom_start_date": self.start_date,
-                "custom_end_date": self.end_date,
+            frappe.db.set_value("Unit", unit_id, {
+                "status": "Occupied",
+                "current_occupant_start_date": self.start_date,
+                "current_occupant_end_date": self.end_date,
             })
+            log_occupancy_event(unit_id, "Occupied", lease=self.name)
 
         frappe.msgprint(
-            f"{len(self.units)} Asset(s) marked as Occupied.",
+            f"{len(self.units)} Unit(s) marked as Occupied.",
             indicator="green", alert=True,
         )
 
-    def release_assets(self):
+    def release_units(self):
         for row in self.units or []:
             unit_id = row.unit_id
-            if not unit_id or not frappe.db.exists("Asset", unit_id):
+            if not unit_id or not frappe.db.exists("Unit", unit_id):
                 continue
-            frappe.db.set_value("Asset", unit_id, {
-                "custom_occupancy_status": "Vacent",
-                "custom_start_date": None,
-                "custom_end_date": None,
+            frappe.db.set_value("Unit", unit_id, {
+                "status": "Vacant",
+                "current_occupant_start_date": None,
+                "current_occupant_end_date": None,
             })
+            log_occupancy_event(unit_id, "Vacated", lease=self.name)
 
         frappe.msgprint(
-            "Assets released and marked as Vacant.",
+            "Units released and marked as Vacant.",
             indicator="green", alert=True,
         )
 
 
 # ------------------------------------------------------------
-# Shared helper
+# Shared helpers
 # ------------------------------------------------------------
-def get_asset_facility_rows(asset_name):
-    """Ticked rows of an Asset's `custom_property_facility` child table."""
+def get_unit_facility_rows(unit_name):
+    """Ticked rows of a Unit's `facilities` child table."""
     return frappe.db.sql(
         """
         SELECT facilities, amount, charge_type, remarks
         FROM `tabProperty Facilities`
         WHERE parent = %s
-          AND parenttype = 'Asset'
-          AND parentfield = 'custom_property_facility'
+          AND parenttype = 'Unit'
+          AND parentfield = 'facilities'
           AND value = 1
         ORDER BY idx
         """,
-        asset_name,
+        unit_name,
         as_dict=True,
     )
+
+
+def log_occupancy_event(unit, event, lease=None, booking=None):
+    """Append-only occupancy history, since Unit itself only stores current
+    state (mirrors the Asset-as-unit hack's limitation on purpose — full
+    historical backfill from pre-rewrite data is out of scope)."""
+    frappe.get_doc({
+        "doctype": "Unit Occupancy Log",
+        "unit": unit,
+        "event": event,
+        "event_date": frappe.utils.today(),
+        "lease": lease,
+        "booking": booking,
+    }).insert(ignore_permissions=True)
 
 
 # ------------------------------------------------------------
@@ -419,9 +428,9 @@ def make_renewal(lease_name):
 # ------------------------------------------------------------
 @frappe.whitelist()
 def get_facilities_for_units(units):
-    """Return the ticked facilities of the given Assets.
+    """Return the ticked facilities of the given Units.
 
-    `units` is a JSON list of Asset names (sent by lease_agreement.js).
+    `units` is a JSON list of Unit names (sent by lease_agreement.js).
     Used by the "Get Facilities From Units" button so the grid fills in
     immediately, without waiting for a save."""
     import json
@@ -431,14 +440,14 @@ def get_facilities_for_units(units):
 
     out = []
     for unit_id in units or []:
-        if not unit_id or not frappe.db.exists("Asset", unit_id):
+        if not unit_id or not frappe.db.exists("Unit", unit_id):
             continue
 
         unit_info = frappe.db.get_value(
-            "Asset", unit_id, ["custom_unit_type", "custom_floor_no"], as_dict=True
+            "Unit", unit_id, ["unit_type", "floor_no"], as_dict=True
         ) or {}
 
-        rows = get_asset_facility_rows(unit_id)
+        rows = get_unit_facility_rows(unit_id)
 
         for r in rows:
             if not r.facilities:
@@ -459,8 +468,8 @@ def get_facilities_for_units(units):
                 "amount": flt(r.amount) or flt(master.get("default_amount")),
                 "charge_type": r.charge_type or master.get("charge_type") or "Recurring",
                 "remarks": r.remarks,
-                "unit_type": unit_info.get("custom_unit_type"),
-                "floor_no": unit_info.get("custom_floor_no"),
+                "unit_type": unit_info.get("unit_type"),
+                "floor_no": unit_info.get("floor_no"),
             })
 
     return out
