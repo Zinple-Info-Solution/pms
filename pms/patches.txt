@@ -14,3 +14,5 @@ pms.patches.v2_1.verify_lease_unit_links
 pms.patches.v2_1.flag_unresolved_sales_invoice_item_unit_type
 pms.patches.v2_1.remove_stale_custom_unit_no
 pms.patches.v2_2.create_deposit_liability_account
+pms.patches.v2_3.create_work_order_workflow
+pms.patches.v2_3.migrate_open_maintenance_requests

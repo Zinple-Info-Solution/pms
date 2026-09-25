@@ -14,6 +14,24 @@ class MaintenanceRequest(Document):
     def on_update(self):
         self.notify_assignee()
 
+    @frappe.whitelist()
+    def create_work_order(self):
+        if self.work_order:
+            frappe.throw(f"Work Order <b>{self.work_order}</b> already exists for this request.")
+
+        work_order = frappe.get_doc({
+            "doctype": "Work Order",
+            "maintenance_request": self.name,
+            "property": self.building,
+            "unit": self.unit,
+            "priority": self.priority,
+            "description": f"{self.subject}\n\n{self.description or ''}".strip(),
+            "assigned_to": self.assigned_to,
+        })
+        work_order.insert(ignore_permissions=True)
+        self.db_set("work_order", work_order.name)
+        return work_order.name
+
     # ------------------------------------------------------------
     # Validations
     # ------------------------------------------------------------

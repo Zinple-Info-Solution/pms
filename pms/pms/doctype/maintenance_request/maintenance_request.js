@@ -27,6 +27,21 @@ frappe.ui.form.on('Maintenance Request', {
     refresh(frm) {
         if (frm.is_new()) return;
 
+        if (!frm.doc.work_order) {
+            frm.add_custom_button(__('Work Order'), () => {
+                frm.call('create_work_order').then(r => {
+                    if (r.message) {
+                        frm.reload_doc();
+                        frappe.set_route('Form', 'Work Order', r.message);
+                    }
+                });
+            }, __('Create'));
+        } else {
+            frm.add_custom_button(__('Work Order'), () => {
+                frappe.set_route('Form', 'Work Order', frm.doc.work_order);
+            }, __('View'));
+        }
+
         // Quick status actions
         if (frm.doc.status === 'Open') {
             frm.add_custom_button(__('Start Work'), () => {

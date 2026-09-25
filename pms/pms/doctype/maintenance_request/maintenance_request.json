@@ -26,7 +26,8 @@
   "section_resolution",
   "resolution_details",
   "column_break_res",
-  "resolved_on"
+  "resolved_on",
+  "work_order"
  ],
  "fields": [
   {
@@ -159,6 +160,14 @@
    "fieldtype": "Datetime",
    "label": "Resolved On",
    "read_only": 1
+  },
+  {
+   "fieldname": "work_order",
+   "fieldtype": "Link",
+   "label": "Work Order",
+   "no_copy": 1,
+   "options": "Work Order",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
@@ -180,6 +189,29 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Property Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Maintenance Staff",
    "share": 1,
    "write": 1
   }

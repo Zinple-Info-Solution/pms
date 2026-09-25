@@ -352,6 +352,41 @@ def settle_security_deposit(settlement):
         )
 
 
+def create_vendor_bill(work_order):
+    """Create a Purchase Invoice against a Work Order's vendor once it's
+    Completed with an actual cost recorded. Cost-centered to the Property
+    so Phase 6's Owner Statements can pick it up correctly."""
+    item_code = ensure_item("Maintenance Service", item_group="Services")
+    cost_center = frappe.db.get_value("Property", work_order.property, "cost_center")
+
+    pi = frappe.get_doc({
+        "doctype": "Purchase Invoice",
+        "supplier": work_order.vendor,
+        "posting_date": frappe.utils.today(),
+        "due_date": frappe.utils.today(),
+        "items": [{
+            "item_code": item_code,
+            "qty": 1,
+            "uom": "Nos",
+            "rate": flt(work_order.actual_cost),
+            "cost_center": cost_center,
+            "description": (
+                f"Maintenance work order {work_order.name} — "
+                f"{work_order.description or work_order.priority + ' priority'}"
+            ),
+        }],
+        "remarks": f"Work Order: {work_order.name}\nProperty: {work_order.property}",
+    })
+    pi.insert(ignore_permissions=True)
+    work_order.db_set("purchase_invoice", pi.name)
+
+    frappe.msgprint(
+        f"Vendor bill <b>{pi.name}</b> created for Work Order <b>{work_order.name}</b>.",
+        indicator="green", alert=True,
+    )
+    return pi.name
+
+
 def on_payment_entry(doc, method=None):
     """Payment Entry hook — when rent invoices get paid (or payment is
     cancelled), refresh the linked Rent Schedule rows."""
