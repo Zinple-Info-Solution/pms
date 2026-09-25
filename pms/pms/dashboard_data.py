@@ -4,7 +4,7 @@
 #
 # Everything here is derived only from PMS's own data flow:
 #   Rent Schedule -> Sales Invoice -> Payment Entry   (rent + collections)
-#   Asset (custom_created_by_pms) custom fields        (units + occupancy)
+#   Unit                                               (units + occupancy)
 #
 # These helpers are consumed by:
 #   * Number Cards  (Custom type -> methods below)
@@ -80,14 +80,12 @@ def outstanding_total():
 
 
 # --------------------------------------------------------------------------
-# Occupancy (from PMS-created Asset units)
+# Occupancy (from Unit records)
 # --------------------------------------------------------------------------
 def occupancy():
     """Return (occupied, total, rate_percent)."""
-    total = frappe.db.count("Asset", {"custom_created_by_pms": 1})
-    occupied = frappe.db.count(
-        "Asset", {"custom_created_by_pms": 1, "custom_occupancy_status": "Occupied"}
-    )
+    total = frappe.db.count("Unit")
+    occupied = frappe.db.count("Unit", {"status": "Occupied"})
     rate = (occupied / total * 100) if total else 0.0
     return occupied, total, rate
 
@@ -204,26 +202,25 @@ def expense_breakdown(start, end, limit=5):
 def units_by_type(limit=6):
     """Unit count per Unit Type, split into occupied / vacant.
 
-    Reads the same PMS-created Assets the occupancy KPI uses, so the totals
-    here always add up to `portfolio.total_units`. Anything past `limit` is
-    folded into a single 'Others' row so the panel never scrolls forever.
+    Reads Unit records directly, so the totals here always add up to
+    `portfolio.total_units`. Anything past `limit` is folded into a single
+    'Others' row so the panel never scrolls forever.
     """
     try:
         rows = frappe.db.sql(
             """
-            SELECT COALESCE(NULLIF(a.custom_unit_type, ''), 'Unassigned') AS label,
-                   COUNT(a.name)                                          AS total,
-                   COALESCE(SUM(CASE WHEN a.custom_occupancy_status = 'Occupied'
-                                     THEN 1 ELSE 0 END), 0)               AS occupied
-            FROM `tabAsset` a
-            WHERE a.custom_created_by_pms = 1
+            SELECT COALESCE(NULLIF(u.unit_type, ''), 'Unassigned') AS label,
+                   COUNT(u.name)                                   AS total,
+                   COALESCE(SUM(CASE WHEN u.status = 'Occupied'
+                                     THEN 1 ELSE 0 END), 0)        AS occupied
+            FROM `tabUnit` u
             GROUP BY label
             ORDER BY total DESC, label ASC
             """,
             as_dict=True,
         )
     except Exception:
-        # missing custom fields on a fresh bench shouldn't break the page
+        # missing Unit doctype on a fresh bench shouldn't break the page
         return []
 
     def _row(label, total, occupied, linkable=True):

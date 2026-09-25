@@ -36,6 +36,10 @@
     {
       "chart": "PMS Maintenance Status",
       "width": "Half"
+    },
+    {
+      "chart": "PMS Work Order Status",
+      "width": "Half"
     }
   ],
   "docstatus": 0,

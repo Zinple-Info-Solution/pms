@@ -14,5 +14,5 @@
  "color": "#3182ce",
  "type": "Custom",
  "method": "pms.pms.dashboard_data.occupancy_rate",
- "document_type": "Asset"
+ "document_type": "Unit"
 }

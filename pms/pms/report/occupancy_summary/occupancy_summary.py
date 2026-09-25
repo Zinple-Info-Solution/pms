@@ -39,22 +39,22 @@ def get_columns():
 
 
 def get_data(filters):
-    conditions = {"custom_created_by_pms": 1}
+    conditions = {}
     if filters.get("building"):
-        conditions["custom_building"] = filters["building"]
+        conditions["property"] = filters["building"]
 
-    assets = frappe.get_all(
-        "Asset",
+    units = frappe.get_all(
+        "Unit",
         filters=conditions,
         fields=[
-            "custom_building as building",
-            "custom_occupancy_status as status",
-            "custom_monthly_rent as rent",
+            "property as building",
+            "status",
+            "monthly_rent as rent",
         ],
     )
 
     buildings = {}
-    for a in assets:
+    for a in units:
         b = buildings.setdefault(a.building or "Unknown", {
             "building": a.building or "Unknown",
             "total_units": 0,

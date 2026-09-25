@@ -50,6 +50,7 @@ scheduler_events = {
         "pms.pms.billing.generate_due_invoices",
         "pms.pms.billing.apply_late_fees",
         "pms.pms.tasks.send_overdue_rent_reminders",
+        "pms.pms.maintenance.generate_preventive_work_orders",
     ],
     "monthly": [
         "pms.pms.owner_accounting.generate_monthly_owner_statements",
