@@ -40,7 +40,9 @@ scheduler_events = {
     "daily": [
         "pms.pms.tasks.check_lease_expiry",
         "pms.pms.tasks.send_lease_expiry_reminders",
+        "pms.pms.tasks.apply_rent_escalations",
         "pms.pms.billing.generate_due_invoices",
+        "pms.pms.billing.apply_late_fees",
         "pms.pms.tasks.send_overdue_rent_reminders",
     ],
 }

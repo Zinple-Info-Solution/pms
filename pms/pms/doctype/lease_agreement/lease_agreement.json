@@ -44,6 +44,8 @@
   "net_monthly_amount",
   "section_schedule",
   "rent_schedule",
+  "section_escalation",
+  "rent_escalation",
   "status",
   "amended_from"
  ],
@@ -190,6 +192,20 @@
    "label": "Rent Schedule",
    "options": "Rent Schedule",
    "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_escalation",
+   "fieldtype": "Section Break",
+   "label": "Rent Escalation"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Automatically bumps the lease's Rent Amount on the given date and regenerates upcoming rent schedule rows.",
+   "fieldname": "rent_escalation",
+   "fieldtype": "Table",
+   "label": "Rent Escalation Schedule",
+   "options": "Rent Escalation Schedule"
   },
   {
    "fieldname": "status",

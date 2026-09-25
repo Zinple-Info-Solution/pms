@@ -308,6 +308,37 @@ class LeaseAgreement(Document):
         self.db_set("status", status)
 
     # ------------------------------------------------------------
+    # Rent escalation
+    # ------------------------------------------------------------
+    def apply_rent_escalation(self, row):
+        """Bump rent_amount per the escalation row and rescale every not-yet-
+        invoiced future Rent Schedule row's rent_amount/total_amount
+        proportionally (Invoiced/Paid rows are historical and untouched)."""
+        old_rent = flt(self.rent_amount)
+        if not old_rent:
+            frappe.throw("Cannot apply escalation: lease has no Rent Amount set.")
+
+        if row.escalation_type == "Percentage":
+            new_rent = old_rent * (1 + flt(row.escalation_value) / 100)
+        else:
+            new_rent = old_rent + flt(row.escalation_value)
+
+        ratio = new_rent / old_rent
+        self.db_set("rent_amount", new_rent)
+
+        for sr in self.rent_schedule:
+            if sr.status == "Pending" and getdate(sr.due_date) >= getdate(row.escalation_date):
+                new_rent_component = flt(sr.rent_amount) * ratio
+                new_total = new_rent_component + flt(sr.charges_amount) - flt(sr.discount_amount)
+                frappe.db.set_value("Rent Schedule", sr.name, {
+                    "rent_amount": new_rent_component,
+                    "total_amount": new_total,
+                })
+
+        row.db_set("applied", 1)
+        row.db_set("new_rent_amount", new_rent)
+
+    # ------------------------------------------------------------
     # Unit occupancy
     # ------------------------------------------------------------
     def update_units(self):

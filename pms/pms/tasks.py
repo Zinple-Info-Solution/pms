@@ -129,6 +129,40 @@ def send_lease_expiry_reminders(days_before: int = 30):
             )
 
 
+def apply_rent_escalations():
+    """Runs daily. Applies any due, not-yet-applied Rent Escalation Schedule
+    row on Active submitted leases."""
+    rows = frappe.db.sql("""
+        SELECT res.parent AS lease, res.name AS row_name
+        FROM `tabRent Escalation Schedule` res
+        INNER JOIN `tabLease Agreement` la ON la.name = res.parent
+        WHERE res.applied = 0
+          AND res.escalation_date <= %s
+          AND la.docstatus = 1
+          AND la.status = 'Active'
+    """, today(), as_dict=True)
+
+    for r in rows:
+        try:
+            lease = frappe.get_doc("Lease Agreement", r.lease)
+            row = next(x for x in lease.rent_escalation if x.name == r.row_name)
+            lease.apply_rent_escalation(row)
+
+            frappe.get_doc({
+                "doctype": "Notification Log",
+                "subject": f"Rent escalation applied on lease {lease.name}",
+                "for_user": lease.owner,
+                "type": "Alert",
+                "document_type": "Lease Agreement",
+                "document_name": lease.name,
+            }).insert(ignore_permissions=True)
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                f"Rent escalation failed: lease {r.lease}",
+            )
+
+
 def send_overdue_rent_reminders():
     """
     Runs daily. Notifies the lease owner about Pending rent cycles that are
@@ -170,6 +204,24 @@ def send_overdue_rent_reminders():
                     f"Amount: {frappe.format_value(r.total_amount, {'fieldtype': 'Currency'})}"
                 ),
             }).insert(ignore_permissions=True)
+            # After a few unpaid reminders (7+ days overdue), also raise a
+            # formal Delinquency Notice — deduped per lease/due_date/day count.
+            if overdue_days >= 7 and not frappe.db.exists("Delinquency Notice", {
+                "lease": r.lease, "due_date": r.due_date, "days_overdue": overdue_days,
+            }):
+                frappe.get_doc({
+                    "doctype": "Delinquency Notice",
+                    "lease": r.lease,
+                    "due_date": r.due_date,
+                    "billing_period": r.billing_period,
+                    "amount": r.total_amount,
+                    "days_overdue": overdue_days,
+                    "notice_text": (
+                        f"Rent of {frappe.format_value(r.total_amount, {'fieldtype': 'Currency'})} "
+                        f"for period {r.billing_period} was due on {r.due_date} and remains unpaid "
+                        f"{overdue_days} day(s) later."
+                    ),
+                }).insert(ignore_permissions=True)
         except Exception:
             frappe.log_error(
                 frappe.get_traceback(),

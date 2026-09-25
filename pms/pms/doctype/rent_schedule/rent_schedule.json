@@ -5,7 +5,7 @@
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
- "field_order": ["due_date", "billing_period", "rent_amount", "charges_amount", "discount_amount", "total_amount", "status", "sales_invoice"],
+ "field_order": ["due_date", "billing_period", "rent_amount", "charges_amount", "discount_amount", "total_amount", "status", "sales_invoice", "late_fee_amount", "late_fee_applied"],
  "fields": [
   {"fieldname": "due_date", "fieldtype": "Date", "in_list_view": 1, "label": "Due Date", "read_only": 1},
   {"fieldname": "billing_period", "fieldtype": "Data", "in_list_view": 1, "label": "Billing Period", "read_only": 1},
@@ -14,7 +14,9 @@
   {"fieldname": "discount_amount", "fieldtype": "Currency", "label": "Discount", "read_only": 1},
   {"fieldname": "total_amount", "fieldtype": "Currency", "in_list_view": 1, "label": "Total", "read_only": 1},
   {"allow_on_submit": 1, "default": "Pending", "fieldname": "status", "fieldtype": "Select", "in_list_view": 1, "label": "Status", "options": "Pending\nInvoiced\nPaid", "read_only": 1},
-  {"allow_on_submit": 1, "fieldname": "sales_invoice", "fieldtype": "Link", "in_list_view": 1, "label": "Sales Invoice", "no_copy": 1, "options": "Sales Invoice", "read_only": 1}
+  {"allow_on_submit": 1, "fieldname": "sales_invoice", "fieldtype": "Link", "in_list_view": 1, "label": "Sales Invoice", "no_copy": 1, "options": "Sales Invoice", "read_only": 1},
+  {"allow_on_submit": 1, "fieldname": "late_fee_amount", "fieldtype": "Currency", "label": "Late Fee", "no_copy": 1, "read_only": 1},
+  {"allow_on_submit": 1, "default": "0", "fieldname": "late_fee_applied", "fieldtype": "Check", "hidden": 1, "label": "Late Fee Applied", "no_copy": 1, "read_only": 1}
  ],
  "grid_page_length": 50,
  "istable": 1,

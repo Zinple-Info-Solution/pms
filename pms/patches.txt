@@ -16,3 +16,4 @@ pms.patches.v2_1.remove_stale_custom_unit_no
 pms.patches.v2_2.create_deposit_liability_account
 pms.patches.v2_3.create_work_order_workflow
 pms.patches.v2_3.migrate_open_maintenance_requests
+pms.patches.v2_4.create_default_late_fee_rule

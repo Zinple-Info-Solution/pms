@@ -4,7 +4,7 @@
 #  - on_invoice_change()  -> Sales Invoice doc_events keep the Rent Schedule in sync
 
 import frappe
-from frappe.utils import flt, today, add_days
+from frappe.utils import flt, today, add_days, getdate
 
 
 CHARGE_ITEM = "PMS Additional Charges"
@@ -216,6 +216,71 @@ def generate_due_invoices():
                 frappe.get_traceback(),
                 f"Auto rent invoice failed: lease {r.lease}",
             )
+
+
+def apply_late_fees():
+    """Runs daily: scan Pending Rent Schedule rows on Active leases past
+    their rule's grace period and add the fee onto that row's
+    charges_amount/total_amount — which then flows automatically into the
+    "Additional charges" invoice line the next time make_rent_invoice()
+    runs for it. Applied once per row (late_fee_applied guards against
+    re-applying on every daily run)."""
+    rows = frappe.db.sql("""
+        SELECT rs.name, rs.parent AS lease, rs.due_date, rs.charges_amount,
+               rs.total_amount, la.building AS property, la.rent_amount
+        FROM `tabRent Schedule` rs
+        INNER JOIN `tabLease Agreement` la ON la.name = rs.parent
+        WHERE rs.status = 'Pending'
+          AND rs.late_fee_applied = 0
+          AND la.docstatus = 1
+          AND la.status = 'Active'
+    """, as_dict=True)
+
+    for r in rows:
+        try:
+            rule = get_late_fee_rule(r.property)
+            if not rule:
+                continue
+
+            overdue_days = (getdate(today()) - getdate(r.due_date)).days
+            if overdue_days < rule.grace_period_days:
+                continue
+
+            if rule.fee_type == "Flat":
+                fee = flt(rule.fee_amount)
+            else:
+                fee = flt(r.rent_amount) * flt(rule.fee_percent) / 100
+
+            if fee <= 0:
+                continue
+
+            frappe.db.set_value("Rent Schedule", r.name, {
+                "charges_amount": flt(r.charges_amount) + fee,
+                "total_amount": flt(r.total_amount) + fee,
+                "late_fee_amount": fee,
+                "late_fee_applied": 1,
+            })
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                f"Late fee application failed: {r.lease} / {r.name}",
+            )
+
+
+def get_late_fee_rule(property_name):
+    """Property-specific rule takes priority over a blank (applies-to-all) one."""
+    rule_name = frappe.db.get_value(
+        "Late Fee Rule", {"property": property_name, "is_active": 1}, "name"
+    ) or frappe.db.sql(
+        """
+        SELECT name FROM `tabLate Fee Rule`
+        WHERE (property IS NULL OR property = '') AND is_active = 1
+        LIMIT 1
+        """
+    )
+    if isinstance(rule_name, list):
+        rule_name = rule_name[0][0] if rule_name else None
+    return frappe.get_doc("Late Fee Rule", rule_name) if rule_name else None
 
 
 def on_invoice_change(doc, method=None):
