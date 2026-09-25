@@ -159,6 +159,46 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Unit Listing",
+   "link_count": 0,
+   "link_to": "Unit Listing",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Property Lead",
+   "link_count": 0,
+   "link_to": "Property Lead",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Site Visit",
+   "link_count": 0,
+   "link_to": "Site Visit",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Rental Application",
+   "link_count": 0,
+   "link_to": "Rental Application",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Lease Agreement",
    "link_count": 0,
    "link_to": "Lease Agreement",

@@ -20,3 +20,4 @@ pms.patches.v2_4.create_default_late_fee_rule
 pms.patches.v2_5.backfill_property_cost_centers
 pms.patches.v2_5.backfill_management_agreement
 pms.patches.v2_5.backfill_cost_center_on_historical_invoices
+pms.patches.v2_6.create_rental_application_workflow

@@ -1,0 +1,219 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "naming_series:",
+ "creation": "2026-09-25 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "lead",
+  "unit",
+  "status",
+  "column_break_main",
+  "applicant_name",
+  "applicant_email",
+  "applicant_phone",
+  "section_employment",
+  "employer",
+  "monthly_income",
+  "column_break_emp",
+  "application_fee",
+  "section_co_applicants",
+  "co_applicants",
+  "section_documents",
+  "documents",
+  "section_references",
+  "application_references",
+  "section_screening",
+  "screening_notes",
+  "lease"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "RA-.YYYY.-.#####"
+  },
+  {
+   "fieldname": "lead",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Lead",
+   "options": "Property Lead"
+  },
+  {
+   "fieldname": "unit",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Unit",
+   "options": "Unit",
+   "reqd": 1
+  },
+  {
+   "default": "Submitted",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Submitted\nScreening\nApproved\nRejected",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "applicant_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Applicant Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "applicant_email",
+   "fieldtype": "Data",
+   "label": "Applicant Email",
+   "options": "Email"
+  },
+  {
+   "fieldname": "applicant_phone",
+   "fieldtype": "Data",
+   "label": "Applicant Phone",
+   "options": "Phone"
+  },
+  {
+   "fieldname": "section_employment",
+   "fieldtype": "Section Break",
+   "label": "Employment & Income"
+  },
+  {
+   "fieldname": "employer",
+   "fieldtype": "Data",
+   "label": "Employer"
+  },
+  {
+   "fieldname": "monthly_income",
+   "fieldtype": "Currency",
+   "label": "Monthly Income"
+  },
+  {
+   "fieldname": "column_break_emp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "application_fee",
+   "fieldtype": "Currency",
+   "label": "Application Fee"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_co_applicants",
+   "fieldtype": "Section Break",
+   "label": "Co-Applicants"
+  },
+  {
+   "fieldname": "co_applicants",
+   "fieldtype": "Table",
+   "label": "Co-Applicants",
+   "options": "Application Co-Applicant"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_documents",
+   "fieldtype": "Section Break",
+   "label": "Documents"
+  },
+  {
+   "fieldname": "documents",
+   "fieldtype": "Table",
+   "label": "Documents",
+   "options": "Application Document"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_references",
+   "fieldtype": "Section Break",
+   "label": "References"
+  },
+  {
+   "fieldname": "application_references",
+   "fieldtype": "Table",
+   "label": "References",
+   "options": "Application Reference"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_screening",
+   "fieldtype": "Section Break",
+   "label": "Screening"
+  },
+  {
+   "fieldname": "screening_notes",
+   "fieldtype": "Text",
+   "label": "Screening Notes"
+  },
+  {
+   "fieldname": "lease",
+   "fieldtype": "Link",
+   "label": "Lease Agreement",
+   "no_copy": 1,
+   "options": "Lease Agreement",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-25 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "pms",
+ "name": "Rental Application",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Leasing Agent",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Property Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "applicant_name"
+}
