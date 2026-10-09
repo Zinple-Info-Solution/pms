@@ -34,8 +34,7 @@ def execute():
             {"fieldname": "lead_name", "fieldtype": "Data", "label": "Your Name", "reqd": 1},
             {"fieldname": "phone", "fieldtype": "Data", "label": "Phone", "reqd": 1},
             {"fieldname": "email", "fieldtype": "Data", "label": "Email"},
-            {"fieldname": "interested_property", "fieldtype": "Link", "label": "Property", "options": "Property"},
-            {"fieldname": "notes", "fieldtype": "Small Text", "label": "What are you looking for?"},
+            {"fieldname": "notes", "fieldtype": "Small Text", "label": "Which properties are you interested in, and what are you looking for?"},
         ],
     }).insert(ignore_permissions=True)
 

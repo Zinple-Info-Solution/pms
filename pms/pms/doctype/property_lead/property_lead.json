@@ -11,7 +11,7 @@
   "phone",
   "email",
   "column_break_main",
-  "interested_property",
+  "interested_properties",
   "interested_unit",
   "source",
   "status",
@@ -50,12 +50,11 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "interested_property",
-   "fieldtype": "Link",
+   "fieldname": "interested_properties",
+   "fieldtype": "Table MultiSelect",
    "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Interested Property",
-   "options": "Property"
+   "label": "Interested Properties",
+   "options": "Property Lead Interest"
   },
   {
    "fieldname": "interested_unit",
@@ -95,7 +94,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-25 12:00:00.000000",
+ "modified": "2026-10-09 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "pms",
  "name": "Property Lead",

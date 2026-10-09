@@ -12,13 +12,14 @@ class PropertyLead(Document):
         if not self.email:
             return
         try:
+            properties = ", ".join(row.property for row in self.interested_properties or [])
             frappe.sendmail(
                 recipients=[self.email],
                 subject="Thanks for your interest!",
                 message=(
                     f"<p>Hi {self.lead_name},</p>"
                     f"<p>Thanks for reaching out"
-                    f"{' about ' + self.interested_property if self.interested_property else ''}. "
+                    f"{' about ' + properties if properties else ''}. "
                     f"One of our leasing agents will contact you shortly to arrange a site visit.</p>"
                 ),
                 delayed=True,
