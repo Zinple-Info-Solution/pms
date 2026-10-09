@@ -7,6 +7,39 @@ from pms.pms.doctype.lease_agreement.lease_agreement import log_occupancy_event
 from pms.pms.doctype.unit.unit import sync_unit_listing
 
 
+def _get_property_managers():
+    """Users to notify about lease-level events. `Lease Agreement.owner` is
+    Frappe's own record-creator metadata field, not a real "who manages this
+    lease" field (leases created via a migration/patch all have the same
+    creator) — so lease-level reminders go to everyone holding the Property
+    Manager role instead, falling back to Administrator if none exist yet
+    (same fallback pattern as the Lead round-robin Assignment Rule patch)."""
+    managers = frappe.get_all(
+        "Has Role", filters={"role": "Property Manager", "parenttype": "User"}, pluck="parent"
+    )
+    active = frappe.get_all("User", filters={"name": ["in", managers], "enabled": 1}, pluck="name")
+    return active or ["Administrator"]
+
+
+def _notify_property_managers(subject, document_type, document_name, email_content=None, send_email=False):
+    for user in _get_property_managers():
+        frappe.get_doc({
+            "doctype": "Notification Log",
+            "subject": subject,
+            "for_user": user,
+            "type": "Alert",
+            "document_type": document_type,
+            "document_name": document_name,
+            "email_content": email_content,
+        }).insert(ignore_permissions=True)
+        if send_email:
+            email = frappe.db.get_value("User", user, "email")
+            if email:
+                frappe.sendmail(
+                    recipients=[email], subject=subject, message=email_content or subject, delayed=True
+                )
+
+
 def check_lease_expiry():
     """
     Runs daily.
@@ -22,7 +55,7 @@ def check_lease_expiry():
             "docstatus": 1,
             "end_date": ["<", today()],
         },
-        fields=["name", "owner", "tenant", "building", "end_date"],
+        fields=["name", "tenant", "building", "end_date"],
     )
 
     for lease in expired_leases:
@@ -47,20 +80,17 @@ def check_lease_expiry():
                     sync_unit_listing(row.unit_id, "Vacant")
                     log_occupancy_event(row.unit_id, "Vacated", lease=doc.name)
 
-            # 3. Notify the owner in-app
-            frappe.get_doc({
-                "doctype": "Notification Log",
-                "subject": f"Lease {doc.name} has expired",
-                "for_user": doc.owner,
-                "type": "Alert",
-                "document_type": "Lease Agreement",
-                "document_name": doc.name,
-                "email_content": (
+            # 3. Notify the property manager(s) in-app
+            _notify_property_managers(
+                subject=f"Lease {doc.name} has expired",
+                document_type="Lease Agreement",
+                document_name=doc.name,
+                email_content=(
                     f"Lease Agreement <b>{doc.name}</b> "
                     f"(Tenant: {doc.tenant}, Building: {doc.building}) "
                     f"expired on {doc.end_date}. Units have been released."
                 ),
-            }).insert(ignore_permissions=True)
+            )
 
         except Exception:
             frappe.log_error(
@@ -82,7 +112,7 @@ def send_lease_expiry_reminders(days_before: int = 30):
             "docstatus": 1,
             "end_date": ["between", [today(), add_days(today(), days_before)]],
         },
-        fields=["name", "owner", "tenant", "building", "end_date"],
+        fields=["name", "tenant", "building", "end_date"],
     )
 
     for lease in upcoming:
@@ -95,34 +125,18 @@ def send_lease_expiry_reminders(days_before: int = 30):
         try:
             subject = f"Lease {lease.name} expires in {days_left} day(s)"
 
-            frappe.get_doc({
-                "doctype": "Notification Log",
-                "subject": subject,
-                "for_user": lease.owner,
-                "type": "Alert",
-                "document_type": "Lease Agreement",
-                "document_name": lease.name,
-                "email_content": (
+            _notify_property_managers(
+                subject=subject,
+                document_type="Lease Agreement",
+                document_name=lease.name,
+                email_content=(
                     f"Lease Agreement <b>{lease.name}</b> "
                     f"(Tenant: {lease.tenant}, Building: {lease.building}) "
                     f"will expire on <b>{lease.end_date}</b>.<br>"
                     f"Please arrange renewal or termination."
                 ),
-            }).insert(ignore_permissions=True)
-
-            # Optional email (silently skipped if no outgoing email is set up)
-            recipient = frappe.db.get_value("User", lease.owner, "email")
-            if recipient:
-                frappe.sendmail(
-                    recipients=[recipient],
-                    subject=subject,
-                    message=(
-                        f"Lease Agreement {lease.name} for tenant {lease.tenant} "
-                        f"in building {lease.building} expires on {lease.end_date} "
-                        f"({days_left} days from today)."
-                    ),
-                    delayed=True,
-                )
+                send_email=True,
+            )
 
         except Exception:
             frappe.log_error(
@@ -150,14 +164,11 @@ def apply_rent_escalations():
             row = next(x for x in lease.rent_escalation if x.name == r.row_name)
             lease.apply_rent_escalation(row)
 
-            frappe.get_doc({
-                "doctype": "Notification Log",
-                "subject": f"Rent escalation applied on lease {lease.name}",
-                "for_user": lease.owner,
-                "type": "Alert",
-                "document_type": "Lease Agreement",
-                "document_name": lease.name,
-            }).insert(ignore_permissions=True)
+            _notify_property_managers(
+                subject=f"Rent escalation applied on lease {lease.name}",
+                document_type="Lease Agreement",
+                document_name=lease.name,
+            )
         except Exception:
             frappe.log_error(
                 frappe.get_traceback(),
@@ -174,7 +185,7 @@ def send_overdue_rent_reminders():
 
     rows = frappe.db.sql("""
         SELECT rs.name, rs.parent AS lease, rs.due_date, rs.total_amount,
-               rs.billing_period, la.tenant, la.owner
+               rs.billing_period, la.tenant
         FROM `tabRent Schedule` rs
         INNER JOIN `tabLease Agreement` la ON la.name = rs.parent
         WHERE rs.status = 'Pending'
@@ -189,23 +200,20 @@ def send_overdue_rent_reminders():
             continue
 
         try:
-            frappe.get_doc({
-                "doctype": "Notification Log",
-                "subject": (
+            _notify_property_managers(
+                subject=(
                     f"Rent OVERDUE {overdue_days} day(s): "
                     f"lease {r.lease} ({r.billing_period})"
                 ),
-                "for_user": r.owner,
-                "type": "Alert",
-                "document_type": "Lease Agreement",
-                "document_name": r.lease,
-                "email_content": (
+                document_type="Lease Agreement",
+                document_name=r.lease,
+                email_content=(
                     f"Rent for lease <b>{r.lease}</b> (Tenant: {r.tenant}) "
                     f"period <b>{r.billing_period}</b> was due on "
                     f"<b>{r.due_date}</b> and is still pending. "
                     f"Amount: {frappe.format_value(r.total_amount, {'fieldtype': 'Currency'})}"
                 ),
-            }).insert(ignore_permissions=True)
+            )
             # After a few unpaid reminders (7+ days overdue), also raise a
             # formal Delinquency Notice — deduped per lease/due_date/day count.
             if overdue_days >= 7 and not frappe.db.exists("Delinquency Notice", {
@@ -242,7 +250,7 @@ def send_overdue_rent_reminders():
                     "reference_type": "Lease Agreement",
                     "reference_name": r.lease,
                     "assigned_by": "Administrator",
-                    "allocated_to": r.owner,
+                    "allocated_to": _get_property_managers()[0],
                     "priority": "High",
                 }).insert(ignore_permissions=True)
         except Exception:
@@ -260,24 +268,21 @@ def send_signature_reminders():
     drafts = frappe.get_all(
         "Lease Agreement",
         filters={"docstatus": 0, "creation": ["<=", add_days(today(), -2)]},
-        fields=["name", "tenant", "owner", "creation"],
+        fields=["name", "tenant", "creation"],
     )
     for lease in drafts:
         try:
-            frappe.get_doc({
-                "doctype": "Notification Log",
-                "subject": f"Lease {lease.name} is still unsigned",
-                "for_user": lease.owner,
-                "type": "Alert",
-                "document_type": "Lease Agreement",
-                "document_name": lease.name,
-                "email_content": (
+            _notify_property_managers(
+                subject=f"Lease {lease.name} is still unsigned",
+                document_type="Lease Agreement",
+                document_name=lease.name,
+                email_content=(
                     f"Lease Agreement <b>{lease.name}</b> for tenant "
                     f"<b>{lease.tenant}</b> has been in Draft for "
                     f"{date_diff(getdate(today()), getdate(lease.creation))} day(s). "
                     f"Follow up to get it signed and submitted."
                 ),
-            }).insert(ignore_permissions=True)
+            )
         except Exception:
             frappe.log_error(frappe.get_traceback(), f"Signature reminder failed: {lease.name}")
 
@@ -320,3 +325,37 @@ def send_renewal_offers():
                 )
         except Exception:
             frappe.log_error(frappe.get_traceback(), f"Renewal offer failed: {lease.name}")
+
+
+def send_meter_reading_reminders():
+    """Runs weekly: nudge about Active Utility Meters that haven't had a
+    reading taken in 35+ days (missed a monthly cycle), so consumption
+    billing doesn't silently fall behind."""
+    cutoff = add_days(today(), -35)
+    meters = frappe.get_all(
+        "Utility Meter",
+        filters={"status": "Active"},
+        fields=["name", "property", "unit", "utility_type", "installation_date"],
+    )
+
+    for meter in meters:
+        last_reading_date = frappe.db.get_value(
+            "Meter Reading", {"meter": meter.name}, "reading_date", order_by="reading_date desc"
+        )
+        reference_date = last_reading_date or meter.installation_date
+        if not reference_date or getdate(reference_date) > getdate(cutoff):
+            continue
+
+        try:
+            _notify_property_managers(
+                subject=f"Meter reading overdue: {meter.name} ({meter.utility_type})",
+                document_type="Utility Meter",
+                document_name=meter.name,
+                email_content=(
+                    f"Utility Meter <b>{meter.name}</b> ({meter.utility_type}) at "
+                    f"{meter.unit or meter.property} hasn't had a reading since "
+                    f"{reference_date}. Take a new reading to keep consumption billing current."
+                ),
+            )
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"Meter reading reminder failed: {meter.name}")

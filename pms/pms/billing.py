@@ -629,17 +629,24 @@ def create_vendor_bill(work_order):
     return pi.name
 
 
-def create_tenant_recharge_invoice(work_order):
-    """Bill the current tenant of a Work Order's unit directly (e.g.
-    tenant-caused damage) instead of charging the owner."""
-    customer = frappe.db.sql("""
+def get_active_customer_for_unit(unit):
+    """Return the Customer on the currently Active (or Notice Given)
+    submitted Lease Agreement covering this unit, or None."""
+    row = frappe.db.sql("""
         SELECT la.customer
         FROM `tabLease Agreement` la
         INNER JOIN `tabLease Agreement Unit` lau ON lau.parent = la.name
         WHERE lau.unit_id = %s AND la.docstatus = 1 AND la.status IN ('Active', 'Notice Given')
         LIMIT 1
-    """, work_order.unit)
-    if not customer or not customer[0][0]:
+    """, unit)
+    return row[0][0] if row and row[0][0] else None
+
+
+def create_tenant_recharge_invoice(work_order):
+    """Bill the current tenant of a Work Order's unit directly (e.g.
+    tenant-caused damage) instead of charging the owner."""
+    customer = get_active_customer_for_unit(work_order.unit)
+    if not customer:
         frappe.throw(
             f"No active tenant found for unit <b>{work_order.unit}</b> to recharge."
         )
@@ -647,7 +654,7 @@ def create_tenant_recharge_invoice(work_order):
     cost_center = frappe.db.get_value("Property", work_order.property, "cost_center")
     si = frappe.get_doc({
         "doctype": "Sales Invoice",
-        "customer": customer[0][0],
+        "customer": customer,
         "posting_date": frappe.utils.today(),
         "due_date": frappe.utils.today(),
         "ignore_pricing_rule": 1,
@@ -669,7 +676,7 @@ def create_tenant_recharge_invoice(work_order):
         f"Tenant recharge invoice <b>{si.name}</b> created for Work Order <b>{work_order.name}</b>.",
         indicator="orange", alert=True,
     )
-    return pi.name
+    return si.name
 
 
 def on_payment_entry(doc, method=None):

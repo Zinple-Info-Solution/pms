@@ -79,7 +79,48 @@
 	{% else %}
 	<p class="text-muted">No maintenance requests yet.</p>
 	{% endif %}
-	<a class="btn btn-primary" href="/app/maintenance-request/new">Submit a Maintenance Request</a>
+
+	{% if active_units %}
+	<h5>Submit a Maintenance Request</h5>
+	<form id="mr-form" class="mr-form">
+		<div class="form-group">
+			<label>Unit</label>
+			<select class="form-control" name="unit_id" required>
+				{% for u in active_units %}
+				<option value="{{ u.unit_id }}" data-lease="{{ u.lease }}">{{ u.unit_id }}</option>
+				{% endfor %}
+			</select>
+		</div>
+		<div class="form-group">
+			<label>Issue Type</label>
+			<select class="form-control" name="issue_type" required>
+				{% for opt in ["Plumbing", "Electrical", "AC / HVAC", "Appliance", "Cleaning", "Pest Control", "Painting", "Structural", "Other"] %}
+				<option value="{{ opt }}">{{ opt }}</option>
+				{% endfor %}
+			</select>
+		</div>
+		<div class="form-group">
+			<label>Priority</label>
+			<select class="form-control" name="priority">
+				{% for opt in ["Low", "Medium", "High", "Urgent"] %}
+				<option value="{{ opt }}" {% if opt == "Medium" %}selected{% endif %}>{{ opt }}</option>
+				{% endfor %}
+			</select>
+		</div>
+		<div class="form-group">
+			<label>Subject</label>
+			<input class="form-control" type="text" name="subject" required>
+		</div>
+		<div class="form-group">
+			<label>Description</label>
+			<textarea class="form-control" name="description" rows="3"></textarea>
+		</div>
+		<button type="submit" class="btn btn-primary">Submit Request</button>
+		<div class="mr-form-error text-danger" style="display:none; margin-top: 8px;"></div>
+	</form>
+	{% else %}
+	<p class="text-muted">You need an active lease to submit a maintenance request.</p>
+	{% endif %}
 
 	{% endif %}
 </div>
@@ -100,5 +141,37 @@ document.querySelectorAll('.confirm-btn').forEach(function (btn) {
 		});
 	});
 });
+
+var mrForm = document.getElementById('mr-form');
+if (mrForm) {
+	mrForm.addEventListener('submit', function (e) {
+		e.preventDefault();
+		var errorEl = mrForm.querySelector('.mr-form-error');
+		errorEl.style.display = 'none';
+		var unitSelect = mrForm.querySelector('[name="unit_id"]');
+		var submitBtn = mrForm.querySelector('button[type="submit"]');
+		submitBtn.disabled = true;
+
+		frappe.call({
+			method: 'pms.www.my-lease.index.create_maintenance_request',
+			args: {
+				lease: unitSelect.options[unitSelect.selectedIndex].getAttribute('data-lease'),
+				unit_id: unitSelect.value,
+				subject: mrForm.querySelector('[name="subject"]').value,
+				issue_type: mrForm.querySelector('[name="issue_type"]').value,
+				priority: mrForm.querySelector('[name="priority"]').value,
+				description: mrForm.querySelector('[name="description"]').value
+			},
+			callback: function () {
+				window.location.reload();
+			},
+			error: function (r) {
+				submitBtn.disabled = false;
+				errorEl.textContent = (r && r.message) || 'Could not submit the request. Please try again.';
+				errorEl.style.display = 'block';
+			}
+		});
+	});
+}
 </script>
 {% endblock %}

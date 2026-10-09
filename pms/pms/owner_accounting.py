@@ -155,6 +155,7 @@ def generate_monthly_owner_statements():
             )
 
 
+@frappe.whitelist()
 def create_distribution(owner_statement_name):
     """Create (and submit) an Owner Distribution + Payment Entry paying out
     an Owner Statement's net_distributable amount to the owner's Supplier."""

@@ -59,5 +59,10 @@ def approve_work_order(work_order):
     if not owns_property:
         frappe.throw("You can only approve work orders on properties you own.", frappe.PermissionError)
 
+    # Ownership is already verified above; the Owner role is intentionally
+    # read-only at the doctype level (it has no Link-based User Permission
+    # scoping on Work Order), so bypass the write-permission check here
+    # rather than granting Owner blanket write access to every Work Order.
+    doc.flags.ignore_permissions = True
     apply_workflow(doc, "Approve")
     return doc.status

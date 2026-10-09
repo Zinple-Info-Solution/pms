@@ -288,6 +288,10 @@
   {
    "read": 1,
    "role": "Vendor"
+  },
+  {
+   "read": 1,
+   "role": "Owner"
   }
  ],
  "row_format": "Dynamic",

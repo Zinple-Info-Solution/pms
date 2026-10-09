@@ -502,7 +502,7 @@ pms.dashboard.Financial = class Financial {
 				<div class="fin-tile-value">${p.active_leases}</div>
 				<div class="fin-tile-note">${__("submitted and running")}</div>
 			</a>
-			<a class="fin-tile" href="/app/asset?custom_created_by_pms=1&custom_occupancy_status=Vacent">
+			<a class="fin-tile" href="/app/unit?status=Vacant">
 				<div class="fin-tile-label">${__("Vacant Units")}</div>
 				<div class="fin-tile-value">${p.vacant_units}</div>
 				<div class="fin-tile-note">${__("available to lease")}</div>
@@ -921,9 +921,7 @@ pms.dashboard.Financial = class Financial {
 				const filled = total ? (occupied / total) * 100 : 0;
 				const tag = row.linkable ? "a" : "div";
 				const href = row.linkable
-					? ` href="/app/asset?custom_created_by_pms=1&custom_unit_type=${encodeURIComponent(
-							row.label
-					  )}"`
+					? ` href="/app/unit?unit_type=${encodeURIComponent(row.label)}"`
 					: "";
 				return `<${tag} class="fin-unit-row" data-idx="${i}"${href}>
 						<div class="fin-unit-top">

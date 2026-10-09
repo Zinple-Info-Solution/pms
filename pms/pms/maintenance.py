@@ -65,7 +65,7 @@ def escalate_overdue_work_orders():
             "sla_breached": 0,
             "status": ["not in", ["Completed", "Closed"]],
         },
-        fields=["name", "property", "priority", "description"],
+        fields=["name", "property", "priority", "description", "assigned_to"],
     )
 
     for wo in overdue:
@@ -74,9 +74,7 @@ def escalate_overdue_work_orders():
             frappe.get_doc({
                 "doctype": "Notification Log",
                 "subject": f"SLA missed: Work Order {wo.name} ({wo.priority})",
-                "for_user": frappe.db.get_value(
-                    "Property", wo.property, "owner"
-                ) or "Administrator",
+                "for_user": wo.assigned_to or "Administrator",
                 "type": "Alert",
                 "document_type": "Work Order",
                 "document_name": wo.name,
@@ -87,3 +85,59 @@ def escalate_overdue_work_orders():
             }).insert(ignore_permissions=True)
         except Exception:
             frappe.log_error(frappe.get_traceback(), f"SLA escalation failed: {wo.name}")
+
+
+def send_warranty_amc_alerts(days_before: int = 30):
+    """Runs daily: notify about in-unit inventory Assets whose Warranty or
+    AMC is expiring within `days_before` days (checked once per field per
+    Asset per run — cheap, since there are normally few such Assets)."""
+    from pms.pms.tasks import _notify_property_managers
+
+    cutoff = add_days(today(), days_before)
+
+    expiring_warranty = frappe.get_all(
+        "Asset",
+        filters={
+            "custom_warranty_expiry": ["between", [today(), cutoff]],
+            "docstatus": ["!=", 2],
+        },
+        fields=["name", "asset_name", "custom_unit", "custom_warranty_expiry"],
+    )
+    for asset in expiring_warranty:
+        try:
+            _notify_property_managers(
+                subject=f"Warranty expiring: {asset.asset_name or asset.name}",
+                document_type="Asset",
+                document_name=asset.name,
+                email_content=(
+                    f"Asset <b>{asset.asset_name or asset.name}</b>"
+                    f"{f' (Unit {asset.custom_unit})' if asset.custom_unit else ''} "
+                    f"has its warranty expiring on <b>{asset.custom_warranty_expiry}</b>."
+                ),
+            )
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"Warranty alert failed: {asset.name}")
+
+    expiring_amc = frappe.get_all(
+        "Asset",
+        filters={
+            "custom_amc_expiry": ["between", [today(), cutoff]],
+            "docstatus": ["!=", 2],
+        },
+        fields=["name", "asset_name", "custom_unit", "custom_amc_vendor", "custom_amc_expiry"],
+    )
+    for asset in expiring_amc:
+        try:
+            _notify_property_managers(
+                subject=f"AMC expiring: {asset.asset_name or asset.name}",
+                document_type="Asset",
+                document_name=asset.name,
+                email_content=(
+                    f"Asset <b>{asset.asset_name or asset.name}</b>"
+                    f"{f' (Unit {asset.custom_unit})' if asset.custom_unit else ''} "
+                    f"has its AMC{f' with {asset.custom_amc_vendor}' if asset.custom_amc_vendor else ''} "
+                    f"expiring on <b>{asset.custom_amc_expiry}</b>. Renew it to avoid a service gap."
+                ),
+            )
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"AMC alert failed: {asset.name}")

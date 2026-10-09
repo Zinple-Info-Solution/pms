@@ -21,7 +21,7 @@ class Owner(Document):
 
     def on_trash(self):
         """Block deletion if this owner still holds a share of any Property."""
-        linked_property = frappe.db.exists("Property Owner", {"owner": self.name})
+        linked_property = frappe.db.exists("Property Owner", {"owner_id": self.name})
         if linked_property:
             frappe.throw(
                 f"Cannot delete Owner <b>{self.owner_name}</b>: still linked to a Property. "
