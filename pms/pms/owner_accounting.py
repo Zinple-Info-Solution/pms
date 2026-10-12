@@ -175,3 +175,23 @@ def create_distribution(owner_statement_name):
     distribution.insert(ignore_permissions=True)
     distribution.submit()
     return distribution.name
+
+
+@frappe.whitelist()
+def bulk_create_distributions(owner_statement_names):
+    """Batch version of create_distribution() for the Owner Statement list
+    view's "Distribute Selected" action — the blueprint's "Accountant
+    approves batch" step. Each statement is independent: one failing
+    (nothing to distribute, no Supplier, etc.) doesn't stop the rest."""
+    if isinstance(owner_statement_names, str):
+        owner_statement_names = frappe.parse_json(owner_statement_names)
+
+    results = {"distributed": [], "failed": []}
+    for name in owner_statement_names:
+        try:
+            distribution = create_distribution(name)
+            results["distributed"].append({"owner_statement": name, "owner_distribution": distribution})
+        except Exception as e:
+            results["failed"].append({"owner_statement": name, "reason": str(e)})
+
+    return results

@@ -48,6 +48,8 @@
   "rent_escalation",
   "status",
   "renewal_offered",
+  "esign_status",
+  "esign_request_id",
   "amended_from"
  ],
  "fields": [
@@ -222,6 +224,23 @@
    "fieldtype": "Check",
    "hidden": 1,
    "label": "Renewal Offered",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "default": "Not Sent",
+   "fieldname": "esign_status",
+   "fieldtype": "Select",
+   "label": "E-Sign Status",
+   "no_copy": 1,
+   "options": "Not Sent\nSent\nSigned\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "esign_request_id",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Zoho Sign Request ID",
    "no_copy": 1,
    "read_only": 1
   },

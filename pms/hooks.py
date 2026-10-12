@@ -56,11 +56,6 @@ scheduler_events = {
         "pms.pms.billing.apply_late_fees",
         "pms.pms.tasks.send_overdue_rent_reminders",
         "pms.pms.maintenance.generate_preventive_work_orders",
-        "pms.pms.maintenance.send_warranty_amc_alerts",
-        "pms.pms.facility.send_facility_task_reminders",
-    ],
-    "weekly": [
-        "pms.pms.tasks.send_meter_reading_reminders",
     ],
     "monthly": [
         "pms.pms.owner_accounting.generate_monthly_owner_statements",

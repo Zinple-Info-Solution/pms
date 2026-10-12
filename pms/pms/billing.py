@@ -6,14 +6,26 @@
 import frappe
 from frappe.utils import flt, today, add_days, getdate
 
+from pms.pms.integrations.whatsapp import send_whatsapp
+from pms.pms.integrations.razorpay_gateway import create_payment_link
+from pms.pms.tasks import _notify_property_managers
+
 
 CHARGE_ITEM = "PMS Additional Charges"
 FACILITY_ITEM_PREFIX = "Facility-"
 
 
 def ensure_item(item_code, item_group="Services"):
-    """Create a simple non-stock service Item if it doesn't exist."""
+    """Create a simple non-stock service Item if it doesn't exist. Every
+    item this returns goes straight onto a Sales Invoice line with no
+    Asset attached, so also clears a stale is_fixed_asset flag on an
+    existing item — several "Building Unit-<type>" items were created
+    back when units were themselves ERPNext Assets (pre the Sep-25
+    Unit/Property rewrite) and still have it set, which blocks invoicing
+    with "You must select an Asset" as soon as that item is reused."""
     if frappe.db.exists("Item", item_code):
+        if frappe.db.get_value("Item", item_code, "is_fixed_asset"):
+            frappe.db.set_value("Item", item_code, "is_fixed_asset", 0)
         return item_code
 
     if not frappe.db.exists("Item Group", item_group):
@@ -70,32 +82,42 @@ def make_deposit_invoice(lease_name):
 
 
 def email_invoice_to_tenant(invoice_name):
-    """Email the tenant a copy of the invoice with a link to pay it on the
-    portal. Best-effort — a missing email address just skips silently
-    rather than blocking lease/invoice creation."""
+    """Email (and, if configured, WhatsApp) the tenant a copy of the
+    invoice with a link to pay it — a Razorpay payment link when that's
+    configured, the tenant portal otherwise. Best-effort — a missing email
+    address just skips silently rather than blocking lease/invoice
+    creation."""
     if not invoice_name:
         return
     si = frappe.get_doc("Sales Invoice", invoice_name)
     email = frappe.db.get_value("Customer", si.customer, "email_id") or frappe.db.get_value(
         "Tenant", {"customer": si.customer}, "email"
     )
-    if not email:
-        return
+    amount = frappe.format_value(si.grand_total, {"fieldtype": "Currency"})
+    razorpay_link = create_payment_link(si)
+    pay_url = razorpay_link or frappe.utils.get_url("/my-lease")
+    pay_label = "Pay now" if razorpay_link else "View and pay on your tenant portal"
 
-    pay_url = frappe.utils.get_url(f"/my-lease")
-    try:
-        frappe.sendmail(
-            recipients=[email],
-            subject=f"Invoice {si.name} — {frappe.format_value(si.grand_total, {'fieldtype': 'Currency'})} due {si.due_date}",
-            message=(
-                f"<p>An invoice of <b>{frappe.format_value(si.grand_total, {'fieldtype': 'Currency'})}</b> "
-                f"has been raised, due on <b>{si.due_date}</b>.</p>"
-                f"<p><a href='{pay_url}'>View and pay on your tenant portal</a></p>"
-            ),
-            delayed=True,
+    if email:
+        try:
+            frappe.sendmail(
+                recipients=[email],
+                subject=f"Invoice {si.name} — {amount} due {si.due_date}",
+                message=(
+                    f"<p>An invoice of <b>{amount}</b> has been raised, due on <b>{si.due_date}</b>.</p>"
+                    f"<p><a href='{pay_url}'>{pay_label}</a></p>"
+                ),
+                delayed=True,
+            )
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"email_invoice_to_tenant failed: {invoice_name}")
+
+    phone = frappe.db.get_value("Tenant", {"customer": si.customer}, "mobile_no")
+    if phone:
+        send_whatsapp(
+            phone,
+            f"Invoice {si.name}: {amount} due {si.due_date}. Pay here: {pay_url}",
         )
-    except Exception:
-        frappe.log_error(frappe.get_traceback(), f"email_invoice_to_tenant failed: {invoice_name}")
 
 
 def send_payment_receipt(payment_entry_name):
@@ -301,15 +323,11 @@ def generate_due_invoices():
         try:
             invoice = make_rent_invoice(r.lease, r.row_name)
             email_invoice_to_tenant(invoice)
-            lease_owner = frappe.db.get_value("Lease Agreement", r.lease, "owner")
-            frappe.get_doc({
-                "doctype": "Notification Log",
-                "subject": f"Rent invoice {invoice} created for lease {r.lease}",
-                "for_user": lease_owner,
-                "type": "Alert",
-                "document_type": "Sales Invoice",
-                "document_name": invoice,
-            }).insert(ignore_permissions=True)
+            _notify_property_managers(
+                subject=f"Rent invoice {invoice} created for lease {r.lease}",
+                document_type="Sales Invoice",
+                document_name=invoice,
+            )
         except Exception:
             frappe.log_error(
                 frappe.get_traceback(),

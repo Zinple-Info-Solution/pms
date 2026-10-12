@@ -5,6 +5,8 @@ import frappe
 from frappe.utils import today, add_days, date_diff, getdate
 from pms.pms.doctype.lease_agreement.lease_agreement import log_occupancy_event
 from pms.pms.doctype.unit.unit import sync_unit_listing
+from pms.pms.integrations.whatsapp import send_whatsapp
+from pms.pms.integrations.razorpay_gateway import create_payment_link
 
 
 def _get_property_managers():
@@ -185,7 +187,7 @@ def send_overdue_rent_reminders():
 
     rows = frappe.db.sql("""
         SELECT rs.name, rs.parent AS lease, rs.due_date, rs.total_amount,
-               rs.billing_period, la.tenant
+               rs.billing_period, rs.sales_invoice, la.tenant, la.customer
         FROM `tabRent Schedule` rs
         INNER JOIN `tabLease Agreement` la ON la.name = rs.parent
         WHERE rs.status = 'Pending'
@@ -199,6 +201,8 @@ def send_overdue_rent_reminders():
         if overdue_days not in (1, 3, 7, 14, 30):
             continue
 
+        amount_fmt = frappe.format_value(r.total_amount, {"fieldtype": "Currency"})
+
         try:
             _notify_property_managers(
                 subject=(
@@ -211,9 +215,33 @@ def send_overdue_rent_reminders():
                     f"Rent for lease <b>{r.lease}</b> (Tenant: {r.tenant}) "
                     f"period <b>{r.billing_period}</b> was due on "
                     f"<b>{r.due_date}</b> and is still pending. "
-                    f"Amount: {frappe.format_value(r.total_amount, {'fieldtype': 'Currency'})}"
+                    f"Amount: {amount_fmt}"
                 ),
             )
+
+            # Nudge the tenant too — day 1/3/7 is meant for them, not just
+            # the property manager (who only needs to act at 30 days).
+            if overdue_days in (1, 3, 7) and r.sales_invoice:
+                pay_url = (
+                    create_payment_link(r.sales_invoice)
+                    or frappe.utils.get_url("/my-lease")
+                )
+                tenant_email, tenant_mobile = frappe.db.get_value(
+                    "Tenant", r.tenant, ["email", "mobile_no"]
+                ) or (None, None)
+                reminder_text = (
+                    f"Rent of {amount_fmt} for {r.billing_period} was due on "
+                    f"{r.due_date} and is still unpaid."
+                )
+                if tenant_email:
+                    frappe.sendmail(
+                        recipients=[tenant_email],
+                        subject=f"Rent reminder: {amount_fmt} overdue",
+                        message=f"<p>{reminder_text}</p><p><a href='{pay_url}'>Pay now</a></p>",
+                        delayed=True,
+                    )
+                if tenant_mobile:
+                    send_whatsapp(tenant_mobile, f"{reminder_text} Pay here: {pay_url}")
             # After a few unpaid reminders (7+ days overdue), also raise a
             # formal Delinquency Notice — deduped per lease/due_date/day count.
             if overdue_days >= 7 and not frappe.db.exists("Delinquency Notice", {
@@ -325,37 +353,3 @@ def send_renewal_offers():
                 )
         except Exception:
             frappe.log_error(frappe.get_traceback(), f"Renewal offer failed: {lease.name}")
-
-
-def send_meter_reading_reminders():
-    """Runs weekly: nudge about Active Utility Meters that haven't had a
-    reading taken in 35+ days (missed a monthly cycle), so consumption
-    billing doesn't silently fall behind."""
-    cutoff = add_days(today(), -35)
-    meters = frappe.get_all(
-        "Utility Meter",
-        filters={"status": "Active"},
-        fields=["name", "property", "unit", "utility_type", "installation_date"],
-    )
-
-    for meter in meters:
-        last_reading_date = frappe.db.get_value(
-            "Meter Reading", {"meter": meter.name}, "reading_date", order_by="reading_date desc"
-        )
-        reference_date = last_reading_date or meter.installation_date
-        if not reference_date or getdate(reference_date) > getdate(cutoff):
-            continue
-
-        try:
-            _notify_property_managers(
-                subject=f"Meter reading overdue: {meter.name} ({meter.utility_type})",
-                document_type="Utility Meter",
-                document_name=meter.name,
-                email_content=(
-                    f"Utility Meter <b>{meter.name}</b> ({meter.utility_type}) at "
-                    f"{meter.unit or meter.property} hasn't had a reading since "
-                    f"{reference_date}. Take a new reading to keep consumption billing current."
-                ),
-            )
-        except Exception:
-            frappe.log_error(frappe.get_traceback(), f"Meter reading reminder failed: {meter.name}")

@@ -12,6 +12,16 @@ frappe.ui.form.on('Lease Agreement', {
         }
         render_facility_summary(frm);
 
+        // ---- Send for e-signature (Zoho Sign), if configured ----
+        if (frm.doc.docstatus === 0 && !frm.is_new() && frm.doc.esign_status !== "Sent") {
+            frappe.db.get_single_value("PMS Integration Settings", "esign_enabled").then(enabled => {
+                if (!enabled) return;
+                frm.add_custom_button(__("Send for Signature"), () => {
+                    frm.call("send_for_signature").then(() => frm.reload_doc());
+                });
+            });
+        }
+
         // Renew for active or expired leases
         if (frm.doc.docstatus === 1 && ["Active", "Expired"].includes(frm.doc.status)) {
             frm.add_custom_button(__("Renew Lease"), () => {

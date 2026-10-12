@@ -33,6 +33,32 @@ class LeaseAgreement(Document):
         self.release_units()
         self.update_status("Terminated")
 
+    @frappe.whitelist()
+    def send_for_signature(self):
+        """Send this draft lease to the tenant for e-signature via Zoho
+        Sign. A separate, explicit action rather than something that fires
+        the moment the draft is created, since the lease's dates/terms
+        often still need adjusting right after generation — staff decide
+        when it's actually ready to go out."""
+        if self.docstatus != 0:
+            frappe.throw("Only a draft Lease Agreement can be sent for signature.")
+
+        from pms.pms.integrations.esign import send_for_esign, is_enabled
+        if not is_enabled():
+            frappe.throw(
+                "E-sign isn't configured yet — turn it on and add Zoho Sign "
+                "credentials in PMS Integration Settings first."
+            )
+
+        if send_for_esign(self):
+            frappe.msgprint(
+                "Sent to the tenant for e-signature.", indicator="green", alert=True
+            )
+        else:
+            frappe.throw(
+                "Couldn't send for e-signature — check the Error Log for details."
+            )
+
     # ------------------------------------------------------------
     # Whole-building lease
     # ------------------------------------------------------------

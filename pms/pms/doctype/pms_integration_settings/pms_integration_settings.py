@@ -2,5 +2,5 @@
 from frappe.model.document import Document
 
 
-class SecurityIncident(Document):
+class PMSIntegrationSettings(Document):
     pass

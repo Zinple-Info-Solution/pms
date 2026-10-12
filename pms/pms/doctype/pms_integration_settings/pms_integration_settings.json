@@ -1,0 +1,136 @@
+{
+ "actions": [],
+ "creation": "2026-10-12 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_whatsapp",
+  "whatsapp_enabled",
+  "whatsapp_phone_number_id",
+  "whatsapp_access_token",
+  "section_esign",
+  "esign_enabled",
+  "zoho_sign_account_id",
+  "zoho_sign_access_token",
+  "zoho_sign_webhook_secret",
+  "section_razorpay",
+  "razorpay_enabled",
+  "razorpay_key_id",
+  "razorpay_key_secret",
+  "razorpay_webhook_secret"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_whatsapp",
+   "fieldtype": "Section Break",
+   "label": "WhatsApp (Meta Cloud API)"
+  },
+  {
+   "default": "0",
+   "description": "Off by default. Notifications fall back to email only until this is on and the fields below are filled in.",
+   "fieldname": "whatsapp_enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "depends_on": "whatsapp_enabled",
+   "description": "From developers.facebook.com/apps → your app → WhatsApp → API Setup.",
+   "fieldname": "whatsapp_phone_number_id",
+   "fieldtype": "Data",
+   "label": "Phone Number ID"
+  },
+  {
+   "depends_on": "whatsapp_enabled",
+   "fieldname": "whatsapp_access_token",
+   "fieldtype": "Password",
+   "label": "Access Token"
+  },
+  {
+   "fieldname": "section_esign",
+   "fieldtype": "Section Break",
+   "label": "E-Sign (Zoho Sign)"
+  },
+  {
+   "default": "0",
+   "description": "Off by default. Leases are generated as drafts with a manual signature reminder until this is on.",
+   "fieldname": "esign_enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "depends_on": "esign_enabled",
+   "fieldname": "zoho_sign_account_id",
+   "fieldtype": "Data",
+   "label": "Zoho Account ID"
+  },
+  {
+   "depends_on": "esign_enabled",
+   "fieldname": "zoho_sign_access_token",
+   "fieldtype": "Password",
+   "label": "Access Token"
+  },
+  {
+   "depends_on": "esign_enabled",
+   "description": "Shared secret configured on the Zoho Sign webhook pointed at this site's /api/method/pms.pms.integrations.esign.webhook",
+   "fieldname": "zoho_sign_webhook_secret",
+   "fieldtype": "Password",
+   "label": "Webhook Secret"
+  },
+  {
+   "fieldname": "section_razorpay",
+   "fieldtype": "Section Break",
+   "label": "Payment Gateway (Razorpay)"
+  },
+  {
+   "default": "0",
+   "description": "Off by default. Rent invoices are emailed with a link to the tenant portal only until this is on.",
+   "fieldname": "razorpay_enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "depends_on": "razorpay_enabled",
+   "fieldname": "razorpay_key_id",
+   "fieldtype": "Data",
+   "label": "Key ID"
+  },
+  {
+   "depends_on": "razorpay_enabled",
+   "fieldname": "razorpay_key_secret",
+   "fieldtype": "Password",
+   "label": "Key Secret"
+  },
+  {
+   "depends_on": "razorpay_enabled",
+   "description": "Configured on the Razorpay webhook pointed at this site's /api/method/pms.pms.integrations.razorpay_gateway.webhook",
+   "fieldname": "razorpay_webhook_secret",
+   "fieldtype": "Password",
+   "label": "Webhook Secret"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-12 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "pms",
+ "name": "PMS Integration Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
