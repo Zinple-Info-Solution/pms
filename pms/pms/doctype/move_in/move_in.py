@@ -8,6 +8,10 @@ class MoveIn(Document):
 
     def validate(self):
         self.validate_unit_on_lease()
+        validate_checklist_attachments(self)
+
+    def before_update_after_submit(self):
+        validate_checklist_attachments(self)
 
     def validate_unit_on_lease(self):
         if not (self.lease and self.unit):
@@ -34,3 +38,15 @@ class MoveIn(Document):
     def on_cancel(self):
         frappe.db.set_value("Unit", self.unit, "status", "Reserved")
         sync_unit_listing(self.unit, "Reserved")
+
+
+def validate_checklist_attachments(doc):
+    """Shared by Move In and Move Out: every row of the Attachments table
+    must point at an item that's actually on this document's checklist."""
+    items = {row.item for row in doc.condition_checklist or []}
+    for row in doc.attachments or []:
+        if row.item not in items:
+            frappe.throw(
+                f"Attachments row #{row.idx}: <b>{row.item}</b> is not an item "
+                f"on the condition checklist."
+            )

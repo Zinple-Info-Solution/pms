@@ -260,6 +260,10 @@ def make_rent_invoice(lease_name, schedule_row=None):
             "cost_center": cost_center,
         })
 
+    # --- Metered utilities not yet billed: one line per reading ----------
+    readings = get_pending_utility_readings(lease_name=lease.name)
+    items.extend(utility_invoice_item(r, cost_center) for r in readings)
+
     # --- Remaining additional charges as one line ------------------------
     other_charges = flt(row.charges_amount) - flt(facility_total)
 
@@ -300,7 +304,88 @@ def make_rent_invoice(lease_name, schedule_row=None):
         "status": "Invoiced",
         "sales_invoice": si.name,
     })
+    mark_utility_readings_invoiced(readings, si.name)
 
+    return si.name
+
+
+UTILITY_READING_FIELDS = [
+    "name", "lease", "unit", "utility_type", "reading_date", "previous_reading",
+    "current_reading", "consumption", "rate_per_unit", "fixed_charge", "amount",
+]
+
+
+def get_pending_utility_readings(lease_name=None, names=None):
+    filters = {"status": "Pending"}
+    if lease_name:
+        filters["lease"] = lease_name
+    if names:
+        filters["name"] = ["in", names]
+    return frappe.get_all(
+        "Utility Reading", filters=filters, fields=UTILITY_READING_FIELDS,
+        order_by="reading_date, creation",
+    )
+
+
+def utility_invoice_item(reading, cost_center):
+    return {
+        "item_code": ensure_item(f"Utility - {reading.utility_type}"),
+        "qty": 1,
+        "uom": "Nos",
+        "rate": flt(reading.amount),
+        "custom_unit": reading.unit,
+        "description": " | ".join(filter(None, [
+            f"{reading.utility_type}: {flt(reading.consumption):g} units "
+            f"({flt(reading.previous_reading):g} → {flt(reading.current_reading):g}) "
+            f"× {flt(reading.rate_per_unit):g}",
+            f"Fixed charge: {flt(reading.fixed_charge):g}" if flt(reading.fixed_charge) else "",
+            f"Unit: {reading.unit}",
+            f"Read on {frappe.utils.formatdate(reading.reading_date)}",
+        ])),
+        "custom_lease_agreement": reading.lease,
+        "cost_center": cost_center,
+    }
+
+
+def mark_utility_readings_invoiced(readings, invoice):
+    for r in readings:
+        frappe.db.set_value("Utility Reading", r.name, {
+            "status": "Invoiced",
+            "sales_invoice": invoice,
+        })
+
+
+def make_utility_invoice(reading_names):
+    """Invoice Pending Utility Readings of one lease on their own, outside
+    the rent cycle (e.g. the final reading at move-out)."""
+    readings = get_pending_utility_readings(names=reading_names)
+    if not readings:
+        frappe.throw("No pending utility readings to invoice.")
+    if len({r.lease for r in readings}) > 1:
+        frappe.throw("Utility readings from different leases can't share one invoice.")
+
+    lease = frappe.get_doc("Lease Agreement", readings[0].lease)
+    if not lease.customer:
+        frappe.throw(f"Lease <b>{lease.name}</b> has no linked Customer.")
+    cost_center = frappe.db.get_value("Property", lease.building, "cost_center")
+
+    si = frappe.get_doc({
+        "doctype": "Sales Invoice",
+        "customer": lease.customer,
+        "posting_date": today(),
+        "due_date": today(),
+        "ignore_pricing_rule": 1,
+        "items": [utility_invoice_item(r, cost_center) for r in readings],
+        "remarks": "\n".join(filter(None, [
+            f"Lease Agreement : {lease.name}",
+            f"Tenant          : {lease.tenant}",
+            "Utility charges",
+        ])),
+    })
+    si.insert(ignore_permissions=True)
+    mark_utility_readings_invoiced(readings, si.name)
+
+    frappe.msgprint(f"Utility invoice <b>{si.name}</b> created.", indicator="green", alert=True)
     return si.name
 
 
@@ -402,7 +487,13 @@ def get_late_fee_rule(property_name):
 
 def on_invoice_change(doc, method=None):
     """Sales Invoice doc_events hook — keeps Rent Schedule status in sync.
-    Submitted & fully paid -> Paid.  Cancelled -> back to Pending."""
+    Submitted & fully paid -> Paid.  Cancelled -> back to Pending.
+    Utility Readings on a cancelled invoice go back to Pending too, so the
+    next invoice picks them up again."""
+    if doc.docstatus == 2:
+        for name in frappe.get_all("Utility Reading", filters={"sales_invoice": doc.name}, pluck="name"):
+            frappe.db.set_value("Utility Reading", name, {"status": "Pending", "sales_invoice": None})
+
     rows = frappe.get_all(
         "Rent Schedule",
         filters={"sales_invoice": doc.name},
@@ -421,6 +512,16 @@ def on_invoice_change(doc, method=None):
             frappe.db.set_value("Rent Schedule", row_name, "status", "Paid")
         elif doc.docstatus == 1:
             frappe.db.set_value("Rent Schedule", row_name, "status", "Invoiced")
+
+
+def on_invoice_trash(doc, method=None):
+    """Sales Invoice on_trash: deleting a draft invoice frees the Rent
+    Schedule row and Utility Readings it billed, so the next invoice picks
+    them up again (and the links don't block the delete)."""
+    for row_name in frappe.get_all("Rent Schedule", filters={"sales_invoice": doc.name}, pluck="name"):
+        frappe.db.set_value("Rent Schedule", row_name, {"status": "Pending", "sales_invoice": None})
+    for name in frappe.get_all("Utility Reading", filters={"sales_invoice": doc.name}, pluck="name"):
+        frappe.db.set_value("Utility Reading", name, {"status": "Pending", "sales_invoice": None})
 
 
 DEPOSIT_LIABILITY_ACCOUNT_NAME = "Tenant Security Deposits"
@@ -466,13 +567,15 @@ def _create_make_ready_work_order(move_out):
 
 def _suggest_deductions_from_inspection_diff(move_out):
     """Compare this Move Out's condition checklist against the matching
-    Move In (same lease + unit) and suggest a deduction row (amount left
+    Move In (same unit, on this lease or the one it renewed) and suggest a deduction row (amount left
     at 0, for staff to fill in) for every item whose condition got worse.
     Never auto-approved — the Settlement stays a draft the Property
     Manager reviews and edits before submitting."""
+    from pms.pms.doctype.lease_agreement.lease_agreement import get_lease_chain
+
     move_ins = frappe.get_all(
         "Move In",
-        filters={"lease": move_out.lease, "unit": move_out.unit, "docstatus": 1},
+        filters={"lease": ["in", get_lease_chain(move_out.lease)], "unit": move_out.unit, "docstatus": 1},
         order_by="creation desc",
         limit=1,
         pluck="name",

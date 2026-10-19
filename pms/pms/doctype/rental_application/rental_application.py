@@ -80,6 +80,7 @@ class RentalApplication(Document):
             "tenant": tenant_name,
             "building": unit.property,
             "lease_based_on": "Selected Units",
+            "based_on_by_unit": 1,
             "billing_based_on": "Asset Wise",
             "start_date": today(),
             "end_date": add_years(today(), 1),

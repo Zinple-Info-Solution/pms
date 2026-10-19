@@ -29,6 +29,7 @@ doc_events = {
         "on_submit": "pms.pms.billing.on_invoice_change",
         "on_update_after_submit": "pms.pms.billing.on_invoice_change",
         "on_cancel": "pms.pms.billing.on_invoice_change",
+        "on_trash": "pms.pms.billing.on_invoice_trash",
     },
     "Payment Entry": {
         "on_submit": "pms.pms.billing.on_payment_entry",

@@ -2,12 +2,17 @@
 import frappe
 from frappe.model.document import Document
 from pms.pms.doctype.unit.unit import sync_unit_listing
+from pms.pms.doctype.move_in.move_in import validate_checklist_attachments
 
 
 class MoveOut(Document):
 
     def validate(self):
         self.validate_unit_on_lease()
+        validate_checklist_attachments(self)
+
+    def before_update_after_submit(self):
+        validate_checklist_attachments(self)
 
     def validate_unit_on_lease(self):
         if not (self.lease and self.unit):

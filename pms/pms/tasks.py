@@ -67,8 +67,20 @@ def check_lease_expiry():
             # 1. Mark lease Expired
             doc.db_set("status", "Expired")
 
-            # 2. Release units back to Vacant
+            # 2. Release units back to Vacant — except those a submitted
+            #    renewal of this lease has taken over.
+            renewed_units = set(frappe.get_all(
+                "Lease Agreement Unit",
+                filters={"parent": ["in", frappe.get_all(
+                    "Lease Agreement",
+                    filters={"renewed_from": doc.name, "docstatus": 1},
+                    pluck="name",
+                )]},
+                pluck="unit_id",
+            ))
             for row in doc.units or []:
+                if row.unit_id in renewed_units:
+                    continue
                 if row.unit_id and frappe.db.exists("Unit", row.unit_id):
                     frappe.db.set_value(
                         "Unit",
@@ -334,6 +346,10 @@ def send_renewal_offers():
     )
 
     for lease in upcoming:
+        # Already renewed by hand from the lease form.
+        if frappe.db.exists("Lease Agreement", {"renewed_from": lease.name, "docstatus": ["<", 2]}):
+            frappe.db.set_value("Lease Agreement", lease.name, "renewal_offered", 1)
+            continue
         try:
             renewal_name = make_renewal(lease.name)
             frappe.db.set_value("Lease Agreement", lease.name, "renewal_offered", 1)

@@ -83,7 +83,11 @@ class LeaseAgreement(Document):
                 f"No units found for property <b>{self.building}</b>."
             )
 
-        unavailable = [u.name for u in all_units if u.status in ("Occupied", "Reserved", "Notice Given")]
+        carried_over = self.get_renewed_units()
+        unavailable = [
+            u.name for u in all_units
+            if u.status in ("Occupied", "Reserved", "Notice Given") and u.name not in carried_over
+        ]
         if unavailable and self.docstatus == 0:
             frappe.throw(
                 "Cannot lease the whole building — these units are "
@@ -376,6 +380,8 @@ class LeaseAgreement(Document):
         if not self.units:
             frappe.throw("Please add at least one Unit before submitting.")
 
+        carried_over = self.get_renewed_units()
+        reserved = 0
         for row in self.units:
             unit_id = row.unit_id
             if not unit_id:
@@ -383,6 +389,12 @@ class LeaseAgreement(Document):
 
             if not frappe.db.exists("Unit", unit_id):
                 frappe.throw(f"Unit <b>{unit_id}</b> not found.")
+
+            if unit_id in carried_over:
+                # Same tenant, already in the unit under the lease being
+                # renewed — keep its status, just extend the occupancy.
+                frappe.db.set_value("Unit", unit_id, "current_occupant_end_date", self.end_date)
+                continue
 
             current_status = frappe.db.get_value("Unit", unit_id, "status")
             if current_status in ("Reserved", "Occupied"):
@@ -398,18 +410,36 @@ class LeaseAgreement(Document):
             })
             sync_unit_listing(unit_id, "Reserved")
             log_occupancy_event(unit_id, "Reserved", lease=self.name)
+            reserved += 1
 
-        frappe.msgprint(
-            f"{len(self.units)} Unit(s) marked as Reserved.",
-            indicator="green", alert=True,
+        if reserved:
+            frappe.msgprint(
+                f"{reserved} Unit(s) marked as Reserved.",
+                indicator="green", alert=True,
+            )
+
+    def get_renewed_units(self):
+        """Units this lease takes over from the lease it renews, while that
+        lease is still running. Once it has expired (units released to
+        Vacant) or been terminated, the units are reserved afresh."""
+        if not self.renewed_from:
+            return set()
+        old = frappe.db.get_value(
+            "Lease Agreement", self.renewed_from, ["docstatus", "status"], as_dict=True
         )
+        if not old or old.docstatus != 1 or old.status not in ("Active", "Notice Given"):
+            return set()
+        return set(frappe.get_all(
+            "Lease Agreement Unit", filters={"parent": self.renewed_from}, pluck="unit_id"
+        ))
 
     def create_deposit_and_first_invoice(self):
         """On lease submission: invoice the security deposit (if any) and
         the first rent cycle, with a payment link emailed to the tenant."""
         from pms.pms.billing import make_deposit_invoice, make_rent_invoice, email_invoice_to_tenant
 
-        if flt(self.security_deposit) > 0:
+        # A renewal keeps the deposit already held under the previous lease.
+        if flt(self.security_deposit) > 0 and not self.renewed_from:
             deposit_invoice = make_deposit_invoice(self.name)
             if deposit_invoice:
                 email_invoice_to_tenant(deposit_invoice)
@@ -421,9 +451,19 @@ class LeaseAgreement(Document):
                 email_invoice_to_tenant(rent_invoice)
 
     def release_units(self):
+        carried_over = self.get_renewed_units()
+        old_end_date = (
+            frappe.db.get_value("Lease Agreement", self.renewed_from, "end_date")
+            if carried_over else None
+        )
         for row in self.units or []:
             unit_id = row.unit_id
             if not unit_id or not frappe.db.exists("Unit", unit_id):
+                continue
+            if unit_id in carried_over:
+                # Cancelling a renewal hands the unit back to the lease it
+                # renewed, which is still running.
+                frappe.db.set_value("Unit", unit_id, "current_occupant_end_date", old_end_date)
                 continue
             frappe.db.set_value("Unit", unit_id, {
                 "status": "Vacant",
@@ -459,6 +499,16 @@ def get_unit_facility_rows(unit_name):
     )
 
 
+def get_lease_chain(lease_name):
+    """This lease plus the leases it renewed, newest first — a renewal
+    has no Move In of its own; the tenant moved in under the original."""
+    chain = []
+    while lease_name and lease_name not in chain:
+        chain.append(lease_name)
+        lease_name = frappe.db.get_value("Lease Agreement", lease_name, "renewed_from")
+    return chain
+
+
 def log_occupancy_event(unit, event, lease=None, booking=None):
     """Append-only occupancy history, since Unit itself only stores current
     state (mirrors the Asset-as-unit hack's limitation on purpose — full
@@ -477,27 +527,51 @@ def log_occupancy_event(unit, event, lease=None, booking=None):
 # Lease renewal
 # ------------------------------------------------------------
 @frappe.whitelist()
-def make_renewal(lease_name):
+def make_renewal(lease_name, rent_increase_percent=0, start_date=None, end_date=None):
     """Create a draft renewal lease continuing right after the old one,
-    with the same duration, units, charges and discount."""
+    with the same units, charges and discount. Rent (per unit and the
+    lease's Rent Amount) goes up by `rent_increase_percent`. Dates default
+    to the day after the old lease ends, for the same duration."""
     old = frappe.get_doc("Lease Agreement", lease_name)
     if old.docstatus != 1:
         frappe.throw("Only a submitted lease can be renewed.")
 
-    duration_days = (getdate(old.end_date) - getdate(old.start_date)).days
-    new_start = add_days(getdate(old.end_date), 1)
-    new_end = add_days(new_start, duration_days)
+    increase = flt(rent_increase_percent)
+    if increase < 0:
+        frappe.throw("Rent increase percentage cannot be negative.")
+    factor = 1 + increase / 100
+
+    existing = frappe.db.get_value(
+        "Lease Agreement", {"renewed_from": old.name, "docstatus": ["<", 2]}, "name"
+    )
+    if existing:
+        frappe.throw(f"Lease <b>{old.name}</b> already has a renewal: <b>{existing}</b>.")
+
+    new_start = getdate(start_date) if start_date else add_days(getdate(old.end_date), 1)
+    if end_date:
+        new_end = getdate(end_date)
+    else:
+        duration_days = (getdate(old.end_date) - getdate(old.start_date)).days
+        new_end = add_days(new_start, duration_days)
 
     new_lease = frappe.copy_doc(old)
     new_lease.start_date = new_start
     new_lease.end_date = new_end
     new_lease.status = ""
+    new_lease.renewed_from = old.name
+    new_lease.rent_increase_percent = increase
+    new_lease.rent_amount = flt(flt(old.rent_amount) * factor, 2)
+    for row in new_lease.units:
+        row.monthly_rent = flt(flt(row.monthly_rent) * factor, 2)
     new_lease.set("rent_schedule", [])
+    # Escalation rows are dated within the old term.
+    new_lease.set("rent_escalation", [])
     new_lease.insert()
 
     frappe.msgprint(
         f"Renewal lease <b>{new_lease.name}</b> created "
-        f"({new_start} → {new_end}). Review and submit it.",
+        f"({new_start} → {new_end}"
+        f"{f', rent +{increase:g}%' if increase else ''}). Review and submit it.",
         indicator="green",
     )
     return new_lease.name

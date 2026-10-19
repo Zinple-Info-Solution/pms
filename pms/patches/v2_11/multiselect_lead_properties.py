@@ -21,6 +21,10 @@ import frappe
 def execute():
     if not frappe.db.exists("DocType", "Property Lead"):
         return
+    # Superseded by v2_12 (single property + many units), which also reads
+    # the old interested_property column directly.
+    if not frappe.get_meta("Property Lead").has_field("interested_properties"):
+        return
 
     frappe.db.delete("Web Form Field", {
         "parenttype": "Web Form",

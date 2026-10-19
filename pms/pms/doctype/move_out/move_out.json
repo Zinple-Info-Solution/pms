@@ -17,6 +17,8 @@
   "settlement",
   "section_checklist",
   "condition_checklist",
+  "section_attachments",
+  "attachments",
   "amended_from"
  ],
  "fields": [
@@ -95,6 +97,19 @@
    "options": "Move In Checklist Item"
   },
   {
+   "fieldname": "section_attachments",
+   "fieldtype": "Section Break",
+   "label": "Item Attachments"
+  },
+  {
+   "fieldname": "attachments",
+   "fieldtype": "Table",
+   "label": "Attachments",
+   "options": "Move Checklist Attachment",
+   "allow_on_submit": 1,
+   "description": "Extra photos, videos or documents per checklist item. Can be added after submission."
+  },
+  {
    "fieldname": "amended_from",
    "fieldtype": "Link",
    "label": "Amended From",
@@ -108,7 +123,7 @@
  "is_submittable": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-25 12:00:00.000000",
+ "modified": "2026-10-14 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "pms",
  "name": "Move Out",

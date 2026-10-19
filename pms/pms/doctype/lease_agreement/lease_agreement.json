@@ -19,6 +19,8 @@
   "billing_frequency",
   "billing_based_on",
   "end_date",
+  "renewed_from",
+  "rent_increase_percent",
   "section_break_vypb",
   "units",
   "section_charges",
@@ -296,6 +298,23 @@
    "reqd": 1
   },
   {
+   "fieldname": "renewed_from",
+   "fieldtype": "Link",
+   "label": "Renewed From",
+   "options": "Lease Agreement",
+   "read_only": 1,
+   "no_copy": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "rent_increase_percent",
+   "fieldtype": "Percent",
+   "label": "Renewal Rent Increase (%)",
+   "read_only": 1,
+   "no_copy": 1,
+   "depends_on": "renewed_from"
+  },
+  {
    "default": "Whole Building",
    "description": "Whole Building auto-adds every vacant unit of the building",
    "fieldname": "lease_based_on",
@@ -350,7 +369,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-22 10:00:00.000000",
+ "modified": "2026-10-19 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "pms",
  "name": "Lease Agreement",

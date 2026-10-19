@@ -2,5 +2,5 @@
 from frappe.model.document import Document
 
 
-class PropertyLeadInterest(Document):
+class MoveChecklistAttachment(Document):
     pass
