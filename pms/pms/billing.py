@@ -609,14 +609,59 @@ def _suggest_deductions_from_inspection_diff(move_out):
 
 
 def get_deposit_liability_account(company=None):
+    """The deposit liability account of `company`, created under its
+    Current Liabilities group if the company doesn't have one yet."""
     company = company or frappe.db.get_single_value("Global Defaults", "default_company")
     account_name = f"{DEPOSIT_LIABILITY_ACCOUNT_NAME} - {frappe.get_cached_value('Company', company, 'abbr')}"
-    if not frappe.db.exists("Account", account_name):
+    if frappe.db.exists("Account", account_name):
+        return account_name
+
+    parent = frappe.db.get_value(
+        "Account",
+        {"company": company, "account_name": "Current Liabilities", "is_group": 1},
+        "name",
+    ) or frappe.db.get_value(
+        "Account", {"company": company, "root_type": "Liability", "is_group": 1}, "name", order_by="lft"
+    )
+    if not parent:
         frappe.throw(
-            f"Account <b>{account_name}</b> not found. Run the "
-            f"create_deposit_liability_account patch first."
+            f"Account <b>{account_name}</b> not found, and company <b>{company}</b> has no "
+            f"liability group account to create it under."
         )
+    frappe.get_doc({
+        "doctype": "Account",
+        "account_name": DEPOSIT_LIABILITY_ACCOUNT_NAME,
+        "company": company,
+        "parent_account": parent,
+        # "Receivable" so rows can carry party_type="Customer" (see the
+        # create_deposit_liability_account patch)
+        "account_type": "Receivable",
+        "root_type": "Liability",
+        "is_group": 0,
+    }).insert(ignore_permissions=True)
     return account_name
+
+
+def get_lease_company(lease):
+    """The company a lease is billed under: that of the tenant's latest
+    invoice, else the user's default company, else the site default."""
+    return (
+        frappe.db.get_value(
+            "Sales Invoice",
+            {"customer": lease.customer, "docstatus": ["!=", 2]},
+            "company",
+            order_by="creation desc",
+        )
+        or frappe.defaults.get_user_default("Company")
+        or frappe.db.get_single_value("Global Defaults", "default_company")
+    )
+
+
+def get_company_cost_center(cost_center, company):
+    """`cost_center` if it belongs to `company`, else None."""
+    if cost_center and frappe.db.get_value("Cost Center", cost_center, "company") == company:
+        return cost_center
+    return None
 
 
 def settle_security_deposit(settlement):
@@ -625,32 +670,37 @@ def settle_security_deposit(settlement):
     liability account, and pays out the refund portion (if positive) via
     a Payment Entry to the tenant's Customer. If deductions exceed the
     deposit, no auto-payment is made — the shortfall is left for manual
-    follow-up (billing/collections), which is out of scope here."""
-    lease = frappe.get_doc("Lease Agreement", settlement.lease)
-    deposit_account = get_deposit_liability_account(
-        frappe.db.get_value("Sales Invoice", {"customer": lease.customer}, "company")
-        or frappe.db.get_single_value("Global Defaults", "default_company")
-    )
+    follow-up (billing/collections), which is out of scope here.
 
-    if flt(settlement.total_deductions) > 0:
-        default_income_account = frappe.get_cached_value(
-            "Company", frappe.db.get_single_value("Global Defaults", "default_company"), "default_income_account"
-        )
+    Every entry is booked under the lease's company (get_lease_company),
+    so all accounts in it belong to the same company."""
+    lease = frappe.get_doc("Lease Agreement", settlement.lease)
+    company = get_lease_company(lease)
+    deposit_account = get_deposit_liability_account(company)
+
+    # only the part of the deductions the deposit covers comes out of it;
+    # anything beyond the deposit goes on the shortfall invoice below
+    deducted_from_deposit = min(flt(settlement.total_deductions), flt(settlement.deposit_amount))
+    if deducted_from_deposit > 0:
+        default_income_account = frappe.get_cached_value("Company", company, "default_income_account")
+        if not default_income_account:
+            frappe.throw(f"Set a Default Income Account on company <b>{company}</b> first.")
         je = frappe.get_doc({
             "doctype": "Journal Entry",
             "voucher_type": "Journal Entry",
+            "company": company,
             "posting_date": frappe.utils.today(),
             "user_remark": f"Security deposit deductions for lease {lease.name} ({settlement.name})",
             "accounts": [
                 {
                     "account": deposit_account,
-                    "debit_in_account_currency": flt(settlement.total_deductions),
+                    "debit_in_account_currency": deducted_from_deposit,
                     "party_type": "Customer",
                     "party": lease.customer,
                 },
                 {
                     "account": default_income_account,
-                    "credit_in_account_currency": flt(settlement.total_deductions),
+                    "credit_in_account_currency": deducted_from_deposit,
                 },
             ],
         })
@@ -659,7 +709,6 @@ def settle_security_deposit(settlement):
         settlement.db_set("journal_entry", je.name)
 
     if flt(settlement.refund_amount) > 0:
-        company = frappe.db.get_single_value("Global Defaults", "default_company")
         bank_or_cash = (
             frappe.get_cached_value("Company", company, "default_bank_account")
             or frappe.get_cached_value("Company", company, "default_cash_account")
@@ -671,6 +720,7 @@ def settle_security_deposit(settlement):
         pe = frappe.get_doc({
             "doctype": "Payment Entry",
             "payment_type": "Pay",
+            "company": company,
             "party_type": "Customer",
             "party": lease.customer,
             "paid_from": bank_or_cash,
@@ -686,9 +736,12 @@ def settle_security_deposit(settlement):
         settlement.db_set("payment_entry", pe.name)
     elif flt(settlement.refund_amount) < 0:
         shortfall = -flt(settlement.refund_amount)
-        cost_center = frappe.db.get_value("Property", lease.building, "cost_center")
+        cost_center = get_company_cost_center(
+            frappe.db.get_value("Property", lease.building, "cost_center"), company
+        )
         si = frappe.get_doc({
             "doctype": "Sales Invoice",
+            "company": company,
             "customer": lease.customer,
             "posting_date": frappe.utils.today(),
             "due_date": frappe.utils.today(),

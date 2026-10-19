@@ -67,7 +67,7 @@
    "fetch_from": "tenant.customer",
    "fieldname": "customer",
    "fieldtype": "Link",
-   "label": "Customer",
+   "label": "Tenant Name",
    "options": "Customer",
    "read_only": 1
   },
@@ -369,7 +369,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-19 12:00:00.000000",
+ "modified": "2026-10-19 17:15:43.589957",
  "modified_by": "Administrator",
  "module": "pms",
  "name": "Lease Agreement",
