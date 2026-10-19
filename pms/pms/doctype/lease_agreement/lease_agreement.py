@@ -597,11 +597,15 @@ def make_move_in(lease_name, unit=None):
             )
         unit = lease.units[0].unit_id
 
+    from pms.pms.doctype.move_in.move_in import get_default_checklist_template
+
     move_in = frappe.get_doc({
         "doctype": "Move In",
         "lease": lease.name,
         "unit": unit,
+        "tenant": lease.tenant,
         "move_in_date": lease.start_date,
+        "checklist_template": get_default_checklist_template(),
     })
     move_in.insert()
 
@@ -636,8 +640,27 @@ def make_move_out(lease_name, unit=None):
         "doctype": "Move Out",
         "lease": lease.name,
         "unit": unit,
+        "tenant": lease.tenant,
         "move_out_date": lease.end_date,
     })
+    # Check the same items the tenant moved in with, starting from their
+    # move-in condition, so the deposit settlement compares like with like.
+    move_in = frappe.db.get_value(
+        "Move In",
+        {"lease": ["in", get_lease_chain(lease.name)], "unit": unit, "docstatus": 1},
+        ["name", "checklist_template"], as_dict=True, order_by="creation desc",
+    )
+    if move_in:
+        move_out.checklist_template = move_in.checklist_template
+        for row in frappe.get_all(
+            "Move In Checklist Item",
+            filters={"parent": move_in.name, "parenttype": "Move In"},
+            fields=["item", "condition"], order_by="idx",
+        ):
+            move_out.append("condition_checklist", row)
+    else:
+        from pms.pms.doctype.move_in.move_in import get_default_checklist_template
+        move_out.checklist_template = get_default_checklist_template()
     move_out.insert()
 
     frappe.msgprint(

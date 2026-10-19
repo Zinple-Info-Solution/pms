@@ -27,3 +27,4 @@ pms.patches.v2_9.create_property_lead_web_form
 pms.patches.v2_9.create_lead_assignment_rule
 pms.patches.v2_11.multiselect_lead_properties
 pms.patches.v2_12.lead_single_property_multi_unit
+pms.patches.v2_13.create_default_checklist_template

@@ -8,6 +8,7 @@ class MoveIn(Document):
 
     def validate(self):
         self.validate_unit_on_lease()
+        fill_checklist_from_template(self)
         validate_checklist_attachments(self)
 
     def before_update_after_submit(self):
@@ -50,3 +51,28 @@ def validate_checklist_attachments(doc):
                 f"Attachments row #{row.idx}: <b>{row.item}</b> is not an item "
                 f"on the condition checklist."
             )
+
+
+DEFAULT_CHECKLIST_TEMPLATE = "Standard Move-In Checklist"
+
+
+def get_default_checklist_template():
+    """The standard template if it exists, else the only template there is."""
+    if frappe.db.exists("Inspection Template", DEFAULT_CHECKLIST_TEMPLATE):
+        return DEFAULT_CHECKLIST_TEMPLATE
+    templates = frappe.get_all("Inspection Template", pluck="name", limit=2)
+    return templates[0] if len(templates) == 1 else None
+
+
+def fill_checklist_from_template(doc):
+    """Shared by Move In and Move Out: an empty checklist with a template
+    picked gets one row per template item, condition Good."""
+    if not doc.get("checklist_template") or doc.condition_checklist:
+        return
+    for item in frappe.get_all(
+        "Inspection Template Item",
+        filters={"parent": doc.checklist_template, "parenttype": "Inspection Template"},
+        pluck="item_name",
+        order_by="idx",
+    ):
+        doc.append("condition_checklist", {"item": item, "condition": "Good"})

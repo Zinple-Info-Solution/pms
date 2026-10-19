@@ -14,6 +14,7 @@
   "tenant",
   "key_handover_notes",
   "section_checklist",
+  "checklist_template",
   "condition_checklist",
   "section_attachments",
   "attachments",
@@ -72,10 +73,16 @@
    "label": "Key / Access Handover Notes"
   },
   {
-   "collapsible": 1,
    "fieldname": "section_checklist",
    "fieldtype": "Section Break",
    "label": "Condition Checklist"
+  },
+  {
+   "fieldname": "checklist_template",
+   "fieldtype": "Link",
+   "label": "Checklist Template",
+   "options": "Inspection Template",
+   "description": "Pick a template to fill the checklist below in one go."
   },
   {
    "fieldname": "condition_checklist",
@@ -122,7 +129,7 @@
  "is_submittable": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-14 12:00:00.000000",
+ "modified": "2026-10-19 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "pms",
  "name": "Move In",
