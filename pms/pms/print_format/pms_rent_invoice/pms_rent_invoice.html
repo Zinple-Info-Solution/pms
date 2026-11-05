@@ -1,0 +1,152 @@
+{%- set data = get_invoice_print_data(doc) -%}
+{%- set total = doc.rounded_total or doc.grand_total or 0 -%}
+{%- set paid = total - (doc.outstanding_amount or 0) -%}
+{%- macro money(value) -%}{{ frappe.utils.fmt_money(value or 0, currency=doc.currency) }}{%- endmacro -%}
+{%- macro date(value) -%}{{ frappe.utils.formatdate(value, "dd MMM yyyy") if value else "—" }}{%- endmacro -%}
+
+<style>
+	.pms-doc { padding: 0 6mm; color: #1f2933; font-size: 12.5px; line-height: 1.5; }
+	.pms-doc table { width: 100%; border-collapse: collapse; }
+	.pms-doc tr { page-break-inside: avoid; }
+	.pms-doc .head td { padding: 0 !important; border: 0 !important; vertical-align: top; }
+	.pms-doc .company { font-size: 16px; font-weight: 700; }
+	.pms-doc .muted { color: #52606d; }
+	.pms-doc .title { font-size: 22px; font-weight: 700; letter-spacing: 0.04em; text-align: right; text-transform: uppercase; }
+	.pms-doc .number { font-weight: 700; text-align: right; }
+	.pms-doc .stamp { margin-top: 4px; color: #1a7f45; font-weight: 700; text-align: right; }
+	.pms-doc .notice { margin: 14px 0 0; padding: 7px 10px; border: 1px solid #b42318; color: #b42318; font-weight: 700; text-align: center; }
+	.pms-doc .meta { margin-top: 20px; }
+	.pms-doc .meta > tbody > tr > td { width: 50%; padding: 0 16px 0 0 !important; border: 0 !important; vertical-align: top; }
+	.pms-doc .meta > tbody > tr > td + td { padding: 0 !important; }
+	.pms-doc .role { color: #52606d; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+	.pms-doc .party { font-size: 14px; font-weight: 700; }
+	.pms-doc .facts td { padding: 2px 0 !important; border: 0 !important; }
+	.pms-doc .facts td + td { font-weight: 600; text-align: right; }
+	.pms-doc .grid { margin-top: 18px; }
+	.pms-doc .grid th, .pms-doc .grid td { padding: 6px 8px !important; border: 1px solid #cbd2d9; color: #1f2933; font-size: 12px; text-align: left; vertical-align: top; }
+	.pms-doc .grid th { background: #f1f4f8; font-weight: 600; }
+	.pms-doc .num { text-align: right !important; white-space: nowrap; }
+	.pms-doc .item { font-weight: 600; }
+	.pms-doc .bottom { margin-top: 14px; }
+	.pms-doc .bottom > tbody > tr > td { padding: 0 !important; border: 0 !important; vertical-align: top; }
+	.pms-doc .totals td { padding: 4px 8px !important; border: 0 !important; border-bottom: 1px solid #e4e7eb !important; }
+	.pms-doc .totals .strong td { background: #f1f4f8; font-size: 13.5px; font-weight: 700; }
+</style>
+
+{% if letter_head and not no_letterhead %}<div class="letter-head">{{ letter_head }}</div>{% endif %}
+
+<div class="pms-doc">
+	<table class="head"><tbody><tr>
+		<td style="width: 60%;">
+			{% if not (letter_head and not no_letterhead) %}
+				<div class="company">{{ data.company.name | e }}</div>
+				<div class="muted">
+					{% if data.company.address %}{{ data.company.address }}{% endif %}
+					{% if data.company.phone_no %}{{ _("Phone") }}: {{ data.company.phone_no | e }}<br>{% endif %}
+					{% if data.company.email %}{{ _("Email") }}: {{ data.company.email | e }}<br>{% endif %}
+				</div>
+			{% endif %}
+			{% if data.company.tax_id %}<div class="muted">{{ _("Tax ID") }}: {{ data.company.tax_id | e }}</div>{% endif %}
+		</td>
+		<td style="width: 40%;">
+			<div class="title">{{ _("Credit Note") if doc.is_return else _("Invoice") }}</div>
+			<div class="number">{{ doc.name | e }}</div>
+			{% if doc.docstatus == 1 and not doc.is_return and total > 0 and (doc.outstanding_amount or 0) <= 0 %}
+				<div class="stamp">{{ _("PAID") }}</div>
+			{% endif %}
+		</td>
+	</tr></tbody></table>
+
+	{% if doc.docstatus == 0 %}
+		<div class="notice">{{ _("DRAFT — not yet submitted") }}</div>
+	{% elif doc.docstatus == 2 %}
+		<div class="notice">{{ _("CANCELLED — this invoice is no longer valid") }}</div>
+	{% endif %}
+
+	<table class="meta"><tbody><tr>
+		<td>
+			<div class="role">{{ _("Billed To") }}</div>
+			<div class="party">{{ (doc.customer_name or doc.customer) | e }}</div>
+			<div class="muted">
+				{% if doc.address_display %}
+					{{ doc.address_display }}
+				{% elif data.tenant and data.tenant.address %}
+					{{ data.tenant.address | e }}<br>
+				{% endif %}
+				{% if data.tenant and data.tenant.mobile_no %}{{ _("Mobile") }}: {{ data.tenant.mobile_no | e }}<br>{% endif %}
+				{% if data.tenant and data.tenant.email %}{{ _("Email") }}: {{ data.tenant.email | e }}{% endif %}
+			</div>
+		</td>
+		<td>
+			<table class="facts"><tbody>
+				<tr><td class="muted">{{ _("Invoice Date") }}</td><td>{{ date(doc.posting_date) }}</td></tr>
+				{% if not doc.is_return %}<tr><td class="muted">{{ _("Due Date") }}</td><td>{{ date(doc.due_date) }}</td></tr>{% endif %}
+				{% if doc.return_against %}<tr><td class="muted">{{ _("Against Invoice") }}</td><td>{{ doc.return_against | e }}</td></tr>{% endif %}
+				{% if data.lease %}<tr><td class="muted">{{ _("Lease Agreement") }}</td><td>{{ data.lease | e }}</td></tr>{% endif %}
+				{% if data.property %}<tr><td class="muted">{{ _("Property") }}</td><td>{{ data.property | e }}</td></tr>{% endif %}
+				{% if data.period %}<tr><td class="muted">{{ _("Billing Period") }}</td><td>{{ data.period | e }}</td></tr>{% endif %}
+			</tbody></table>
+		</td>
+	</tr></tbody></table>
+
+	<table class="grid">
+		<thead><tr>
+			<th style="width: 5%;">#</th>
+			<th>{{ _("Description") }}</th>
+			<th class="num" style="width: 8%;">{{ _("Qty") }}</th>
+			<th class="num" style="width: 17%;">{{ _("Rate") }}</th>
+			<th class="num" style="width: 17%;">{{ _("Amount") }}</th>
+		</tr></thead>
+		<tbody>
+			{% for row in doc.items %}
+				{%- set lines = (row.description or row.item_name or row.item_code or "") | striptags | replace(" | ", "\n") -%}
+				<tr>
+					<td>{{ loop.index }}</td>
+					<td>
+						{% for line in lines.split("\n") %}
+							{% if loop.first %}<div class="item">{{ line | e }}</div>{% else %}<div class="muted">{{ line | e }}</div>{% endif %}
+						{% endfor %}
+					</td>
+					<td class="num">{{ "%g" | format(row.qty or 0) }}</td>
+					<td class="num">{{ money(row.rate) }}</td>
+					<td class="num">{{ money(row.amount) }}</td>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+
+	<table class="bottom"><tbody><tr>
+		<td style="width: 55%; padding-right: 16px !important;">
+			{% if doc.in_words %}
+				<div class="role">{{ _("Amount in Words") }}</div>
+				<div>{{ doc.in_words | e }}</div>
+			{% endif %}
+			{% if doc.terms %}
+				<div class="role" style="margin-top: 10px;">{{ _("Terms") }}</div>
+				<div>{{ doc.terms }}</div>
+			{% endif %}
+		</td>
+		<td style="width: 45%;">
+			<table class="totals"><tbody>
+				{% if (doc.discount_amount or 0) or doc.get("taxes") %}
+					<tr><td>{{ _("Subtotal") }}</td><td class="num">{{ money(doc.total) }}</td></tr>
+				{% endif %}
+				{% if doc.discount_amount %}
+					<tr><td>{{ _("Discount") }}</td><td class="num">-{{ money(doc.discount_amount) }}</td></tr>
+				{% endif %}
+				{% for tax in doc.get("taxes") or [] %}
+					{% if tax.tax_amount %}
+						<tr><td>{{ tax.description | striptags | e }}</td><td class="num">{{ money(tax.tax_amount) }}</td></tr>
+					{% endif %}
+				{% endfor %}
+				<tr class="strong"><td>{{ _("Total") }}</td><td class="num">{{ money(total) }}</td></tr>
+				{% if doc.docstatus == 1 and not doc.is_return and paid > 0 %}
+					<tr><td>{{ _("Paid") }}</td><td class="num">{{ money(paid) }}</td></tr>
+				{% endif %}
+				{% if doc.docstatus == 1 and not doc.is_return %}
+					<tr class="strong"><td>{{ _("Balance Due") }}</td><td class="num">{{ money(doc.outstanding_amount) }}</td></tr>
+				{% endif %}
+			</tbody></table>
+		</td>
+	</tr></tbody></table>
+</div>

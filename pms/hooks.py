@@ -63,6 +63,15 @@ scheduler_events = {
     ],
 }
 
+# Used by the PMS print formats
+jinja = {
+    "methods": [
+        "pms.pms.print_lease.get_lease_print_data",
+        "pms.pms.print_billing.get_invoice_print_data",
+        "pms.pms.print_billing.get_payment_print_data",
+    ],
+}
+
 # ------------------------------------------------------------------
 # Fixtures  (export custom fields on Asset / Sales Invoice Item etc.)
 # Run:  bench --site test.com export-fixtures

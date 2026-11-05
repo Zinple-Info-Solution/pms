@@ -1,0 +1,133 @@
+{%- set data = get_payment_print_data(doc) -%}
+{%- set currency = doc.paid_from_account_currency if doc.payment_type == "Receive" else doc.paid_to_account_currency -%}
+{%- set amount = doc.paid_amount if doc.payment_type == "Receive" else doc.received_amount -%}
+{%- macro money(value, in_currency=None) -%}{{ frappe.utils.fmt_money(value or 0, currency=in_currency or currency) }}{%- endmacro -%}
+{%- macro date(value) -%}{{ frappe.utils.formatdate(value, "dd MMM yyyy") if value else "—" }}{%- endmacro -%}
+{%- set titles = {"Receive": _("Payment Receipt"), "Pay": _("Payment Voucher"), "Internal Transfer": _("Transfer Voucher")} -%}
+{%- set party_roles = {"Receive": _("Received From"), "Pay": _("Paid To")} -%}
+
+<style>
+	.pms-doc { padding: 0 6mm; color: #1f2933; font-size: 12.5px; line-height: 1.5; }
+	.pms-doc table { width: 100%; border-collapse: collapse; }
+	.pms-doc tr { page-break-inside: avoid; }
+	.pms-doc .head td { padding: 0 !important; border: 0 !important; vertical-align: top; }
+	.pms-doc .company { font-size: 16px; font-weight: 700; }
+	.pms-doc .muted { color: #52606d; }
+	.pms-doc .title { font-size: 22px; font-weight: 700; letter-spacing: 0.04em; text-align: right; text-transform: uppercase; }
+	.pms-doc .number { font-weight: 700; text-align: right; }
+	.pms-doc .notice { margin: 14px 0 0; padding: 7px 10px; border: 1px solid #b42318; color: #b42318; font-weight: 700; text-align: center; }
+	.pms-doc .amount-box { margin-top: 18px; padding: 12px 16px; border: 1.5px solid #1f2933; }
+	.pms-doc .amount { font-size: 24px; font-weight: 700; }
+	.pms-doc .meta { margin-top: 20px; }
+	.pms-doc .meta > tbody > tr > td { width: 50%; padding: 0 16px 0 0 !important; border: 0 !important; vertical-align: top; }
+	.pms-doc .meta > tbody > tr > td + td { padding: 0 !important; }
+	.pms-doc .role { color: #52606d; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+	.pms-doc .party { font-size: 14px; font-weight: 700; }
+	.pms-doc .facts td { padding: 2px 0 !important; border: 0 !important; }
+	.pms-doc .facts td + td { font-weight: 600; text-align: right; }
+	.pms-doc h2 { margin: 22px 0 6px; font-size: 13px; font-weight: 700; }
+	.pms-doc .grid th, .pms-doc .grid td { padding: 6px 8px !important; border: 1px solid #cbd2d9; color: #1f2933; font-size: 12px; text-align: left; vertical-align: top; }
+	.pms-doc .grid th { background: #f1f4f8; font-weight: 600; }
+	.pms-doc .grid .total td { background: #f1f4f8; font-weight: 700; }
+	.pms-doc .num { text-align: right !important; white-space: nowrap; }
+	.pms-doc .signature { width: 45%; margin: 56px 0 0 auto; border-top: 1px solid #1f2933; padding-top: 4px; page-break-inside: avoid; }
+</style>
+
+{% if letter_head and not no_letterhead %}<div class="letter-head">{{ letter_head }}</div>{% endif %}
+
+<div class="pms-doc">
+	<table class="head"><tbody><tr>
+		<td style="width: 55%;">
+			{% if not (letter_head and not no_letterhead) %}
+				<div class="company">{{ data.company.name | e }}</div>
+				<div class="muted">
+					{% if data.company.address %}{{ data.company.address }}{% endif %}
+					{% if data.company.phone_no %}{{ _("Phone") }}: {{ data.company.phone_no | e }}<br>{% endif %}
+					{% if data.company.email %}{{ _("Email") }}: {{ data.company.email | e }}<br>{% endif %}
+				</div>
+			{% endif %}
+			{% if data.company.tax_id %}<div class="muted">{{ _("Tax ID") }}: {{ data.company.tax_id | e }}</div>{% endif %}
+		</td>
+		<td style="width: 45%;">
+			<div class="title">{{ titles.get(doc.payment_type) or _("Payment") }}</div>
+			<div class="number">{{ doc.name | e }}</div>
+		</td>
+	</tr></tbody></table>
+
+	{% if doc.docstatus == 0 %}
+		<div class="notice">{{ _("DRAFT — not yet submitted, not a valid receipt") if doc.payment_type == "Receive" else _("DRAFT — not yet submitted") }}</div>
+	{% elif doc.docstatus == 2 %}
+		<div class="notice">{{ _("CANCELLED — this payment is no longer valid") }}</div>
+	{% endif %}
+
+	<div class="amount-box">
+		<div class="role">{{ _("Amount") }}</div>
+		<div class="amount">{{ money(amount) }}</div>
+		<div class="muted">{{ frappe.utils.money_in_words(amount, currency) | e }}</div>
+	</div>
+
+	<table class="meta"><tbody><tr>
+		<td>
+			{% if doc.party %}
+				<div class="role">{{ party_roles.get(doc.payment_type) }}</div>
+				<div class="party">{{ (doc.party_name or doc.party) | e }}</div>
+				<div class="muted">
+					{% if data.tenant and data.tenant.mobile_no %}{{ _("Mobile") }}: {{ data.tenant.mobile_no | e }}<br>{% endif %}
+					{% if data.tenant and data.tenant.email %}{{ _("Email") }}: {{ data.tenant.email | e }}{% endif %}
+				</div>
+			{% else %}
+				<div class="role">{{ _("Transfer") }}</div>
+				<div>{{ doc.paid_from | e }} → {{ doc.paid_to | e }}</div>
+			{% endif %}
+		</td>
+		<td>
+			<table class="facts"><tbody>
+				<tr><td class="muted">{{ _("Payment Date") }}</td><td>{{ date(doc.posting_date) }}</td></tr>
+				{% if doc.mode_of_payment %}<tr><td class="muted">{{ _("Paid By") }}</td><td>{{ doc.mode_of_payment | e }}</td></tr>{% endif %}
+				{% if doc.reference_no %}<tr><td class="muted">{{ _("Reference No.") }}</td><td>{{ doc.reference_no | e }}</td></tr>{% endif %}
+				{% if doc.reference_date %}<tr><td class="muted">{{ _("Reference Date") }}</td><td>{{ date(doc.reference_date) }}</td></tr>{% endif %}
+			</tbody></table>
+		</td>
+	</tr></tbody></table>
+
+	{% if data.references %}
+		<h2>{{ _("Payment Applied To") }}</h2>
+		<table class="grid">
+			<thead><tr>
+				<th>{{ _("Document") }}</th>
+				<th>{{ _("Billing Period") }}</th>
+				<th class="num">{{ _("Invoice Total") }}</th>
+				<th class="num">{{ _("Amount Paid") }}</th>
+			</tr></thead>
+			<tbody>
+				{% for ref in data.references %}
+					<tr>
+						<td>{{ ref.row.reference_name | e }}</td>
+						<td>{{ (ref.period or "—") | e }}</td>
+						<td class="num">{{ money(ref.row.total_amount) }}</td>
+						<td class="num">{{ money(ref.row.allocated_amount) }}</td>
+					</tr>
+				{% endfor %}
+				{% if doc.unallocated_amount %}
+					<tr><td colspan="3">{{ _("Advance (not yet applied to an invoice)") }}</td><td class="num">{{ money(doc.unallocated_amount) }}</td></tr>
+				{% endif %}
+			</tbody>
+		</table>
+	{% elif doc.remarks %}
+		<h2>{{ _("Remarks") }}</h2>
+		<p>{{ doc.remarks | e }}</p>
+	{% endif %}
+
+	{% if doc.get("deductions") %}
+		<h2>{{ _("Deductions") }}</h2>
+		<table class="grid">
+			<tbody>
+				{% for row in doc.deductions %}
+					<tr><td>{{ (row.description or row.account) | e }}</td><td class="num">{{ money(row.amount) }}</td></tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	{% endif %}
+
+	<div class="signature">{{ _("Authorised Signature") }}</div>
+</div>

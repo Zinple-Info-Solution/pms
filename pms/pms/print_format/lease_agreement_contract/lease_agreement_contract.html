@@ -1,0 +1,257 @@
+{%- set data = get_lease_print_data(doc) -%}
+{%- macro money(value) -%}{{ frappe.utils.fmt_money(value or 0, currency=data.currency) }}{%- endmacro -%}
+{%- macro date(value) -%}{{ frappe.utils.formatdate(value, "dd MMMM yyyy") if value else "—" }}{%- endmacro -%}
+{%- set landlord = data.owners[0] if data.owners else None -%}
+{%- set landlord_name = (data.owners | map(attribute="owner_name") | join(", ")) if data.owners else data.company -%}
+{%- set clause = namespace(no=0) -%}
+{%- macro heading(title) -%}
+	{%- set clause.no = clause.no + 1 -%}
+	<h3>{{ clause.no }}. {{ title }}</h3>
+{%- endmacro -%}
+
+<style>
+	.lease-doc { padding: 0 6mm; color: #1f2933; font-size: 12.5px; line-height: 1.5; }
+	/* page numbers only exist in the PDF; print view unhides this footer */
+	.print-format-gutter #footer-html { display: none !important; }
+	.lease-doc h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.04em; text-align: center; text-transform: uppercase; }
+	.lease-doc h2 { margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1.5px solid #1f2933; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+	.lease-doc h3 { margin: 12px 0 2px; font-size: 12.5px; font-weight: 700; }
+	.lease-doc p { margin: 0 0 6px; }
+	.lease-doc .ref { margin: 4px 0 18px; color: #52606d; text-align: center; }
+	.lease-doc .notice { margin-bottom: 16px; padding: 7px 10px; border: 1px solid #b42318; color: #b42318; font-weight: 700; text-align: center; }
+	.lease-doc table { width: 100%; margin-bottom: 8px; border-collapse: collapse; }
+	.lease-doc tr { page-break-inside: avoid; }
+	.lease-doc .grid th, .lease-doc .grid td { padding: 5px 8px !important; border: 1px solid #cbd2d9; color: #1f2933; font-size: 12px; text-align: left; vertical-align: top; }
+	.lease-doc .grid th { background: #f1f4f8; font-weight: 600; }
+	.lease-doc .grid .num { text-align: right; white-space: nowrap; }
+	.lease-doc .grid .total td { background: #f1f4f8; font-weight: 700; }
+	.lease-doc .parties > tbody > tr > td { width: 50%; padding: 0 16px 0 0; vertical-align: top; }
+	.lease-doc .parties > tbody > tr > td + td { padding: 0 0 0 16px; }
+	.lease-doc .role { color: #52606d; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+	.lease-doc .party { font-size: 14px; font-weight: 700; }
+	.lease-doc .details { color: #3e4c59; }
+	.lease-doc .keep { page-break-inside: avoid; }
+	.lease-doc .signatures td { width: 50%; padding: 0 16px 0 0; vertical-align: top; }
+	.lease-doc .signatures td + td { padding: 0 0 0 16px; }
+	.lease-doc .sign-line { height: 52px; border-bottom: 1px solid #1f2933; }
+	.lease-doc .annexure { page-break-before: always; }
+</style>
+
+{% if letter_head and not no_letterhead %}<div class="letter-head">{{ letter_head }}</div>{% endif %}
+
+<div id="footer-html" class="visible-pdf">
+	<p class="text-center small" style="color: #52606d;">
+		{{ doc.name | e }} &middot; {{ _("Page") }} <span class="page"></span> {{ _("of") }} <span class="topage"></span>
+	</p>
+</div>
+
+<div class="lease-doc">
+	<h1>{{ _("Lease Agreement") }}</h1>
+	<p class="ref">
+		{{ _("Agreement No.") }} <b>{{ doc.name | e }}</b>
+		{% if doc.renewed_from %}&middot; {{ _("Renewal of") }} {{ doc.renewed_from | e }}{% endif %}
+	</p>
+
+	{% if doc.docstatus == 0 %}
+		<div class="notice">{{ _("DRAFT — not yet submitted") }}</div>
+	{% elif doc.docstatus == 2 %}
+		<div class="notice">{{ _("CANCELLED — this agreement is no longer in effect") }}</div>
+	{% endif %}
+
+	<p>{{ _("This Lease Agreement is made between the Landlord and the Tenant named below, for the premises and on the terms set out in this document.") }}</p>
+
+	<h2>{{ _("Parties") }}</h2>
+	<table class="parties"><tbody><tr>
+		<td>
+			<div class="role">{{ _("Landlord") }}</div>
+			<div class="party">{{ landlord_name | e }}</div>
+			<div class="details">
+				{% if landlord and landlord.mobile_no %}{{ _("Mobile") }}: {{ landlord.mobile_no | e }}<br>{% endif %}
+				{% if landlord and landlord.email %}{{ _("Email") }}: {{ landlord.email | e }}<br>{% endif %}
+				{% if data.owners %}{{ _("Managed by") }}: {{ data.company | e }}{% endif %}
+			</div>
+		</td>
+		<td>
+			<div class="role">{{ _("Tenant") }}</div>
+			<div class="party">{{ data.tenant.full_name | e }}</div>
+			<div class="details">
+				{% if data.tenant.national_id %}{{ _("National ID / Passport") }}: {{ data.tenant.national_id | e }}<br>{% endif %}
+				{% if data.tenant.nationality %}{{ _("Nationality") }}: {{ data.tenant.nationality | e }}<br>{% endif %}
+				{% if data.tenant.mobile_no %}{{ _("Mobile") }}: {{ data.tenant.mobile_no | e }}<br>{% endif %}
+				{% if data.tenant.email %}{{ _("Email") }}: {{ data.tenant.email | e }}<br>{% endif %}
+				{% if data.tenant.address %}{{ _("Address") }}: {{ data.tenant.address | e }}{% endif %}
+			</div>
+		</td>
+	</tr></tbody></table>
+
+	<h2>{{ _("Premises") }}</h2>
+	<p>
+		<b>{{ doc.building | e }}</b>{% if doc.floor %}, {{ _("Floor") }} {{ doc.floor | e }}{% endif %}
+		{% if data.property_address %}<br>{{ data.property_address }}{% endif %}
+	</p>
+	{% if data.units %}
+		<table class="grid">
+			<thead><tr>
+				<th>{{ _("Unit") }}</th>
+				<th>{{ _("Type") }}</th>
+				<th>{{ _("Floor") }}</th>
+				<th class="num">{{ _("Area (sqft)") }}</th>
+				<th class="num">{{ _("Monthly Rent") }}</th>
+			</tr></thead>
+			<tbody>
+				{% for unit in data.units %}
+					<tr>
+						<td>{{ unit.unit_id | e }}</td>
+						<td>{{ (unit.unit_type or "—") | e }}</td>
+						<td>{{ unit.floor_no if unit.floor_no not in (None, "") else "—" }}</td>
+						<td class="num">{{ "%g" | format(unit.area_sqft) if unit.area_sqft else "—" }}</td>
+						<td class="num">{{ money(unit.monthly_rent) }}</td>
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	{% endif %}
+
+	<h2>{{ _("Lease Term") }}</h2>
+	<table class="grid"><tbody>
+		<tr>
+			<th style="width: 25%;">{{ _("Start Date") }}</th><td style="width: 25%;">{{ date(doc.start_date) }}</td>
+			<th style="width: 25%;">{{ _("End Date") }}</th><td style="width: 25%;">{{ date(doc.end_date) }}</td>
+		</tr>
+		<tr>
+			<th>{{ _("Duration") }}</th><td>{{ data.term or "—" }}</td>
+			<th>{{ _("Billing Frequency") }}</th><td>{{ (doc.billing_frequency or "—") | e }}</td>
+		</tr>
+	</tbody></table>
+
+	<h2>{{ _("Rent and Charges") }}</h2>
+	<table class="grid keep">
+		<tbody>
+			<tr><td>{{ _("Monthly Rent") }}</td><td class="num">{{ money(doc.total_rent or doc.rent_amount) }}</td></tr>
+			{% for charge in data.recurring_charges %}
+				<tr><td>{{ charge.name | e }} {{ _("(per month)") }}</td><td class="num">{{ money(charge.amount) }}</td></tr>
+			{% endfor %}
+			{% if doc.discount_per_month %}
+				<tr><td>{{ _("Discount (per month)") }}</td><td class="num">-{{ money(doc.discount_per_month) }}</td></tr>
+			{% endif %}
+			<tr class="total"><td>{{ _("Net Amount per Month") }}</td><td class="num">{{ money(doc.net_monthly_amount or doc.total_rent or doc.rent_amount) }}</td></tr>
+		</tbody>
+	</table>
+	<table class="grid keep">
+		<tbody>
+			<tr><td>{{ _("Security Deposit (refundable, see clause 3)") }}</td><td class="num">{{ money(doc.security_deposit) }}</td></tr>
+			{% for charge in data.one_time_charges %}
+				<tr><td>{{ charge.name | e }} {{ _("(one time)") }}</td><td class="num">{{ money(charge.amount) }}</td></tr>
+			{% endfor %}
+		</tbody>
+	</table>
+	{% if doc.renewed_from and doc.rent_increase_percent %}
+		<p>{{ _("The rent above includes an increase of {0}% on renewal of the previous agreement.").format("%g" | format(doc.rent_increase_percent)) }}</p>
+	{% endif %}
+
+	{% if doc.rent_escalation %}
+		<div class="keep">
+			<p><b>{{ _("Scheduled Rent Changes") }}</b></p>
+			<table class="grid">
+				<thead><tr>
+					<th>{{ _("Effective Date") }}</th>
+					<th>{{ _("Increase") }}</th>
+					<th class="num">{{ _("New Monthly Rent") }}</th>
+				</tr></thead>
+				<tbody>
+					{% for row in doc.rent_escalation %}
+						<tr>
+							<td>{{ date(row.escalation_date) }}</td>
+							<td>{% if row.escalation_type == "Percentage" %}{{ "%g" | format(row.escalation_value) }}%{% else %}{{ money(row.escalation_value) }}{% endif %}</td>
+							<td class="num">{{ money(row.new_rent_amount) }}</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	{% endif %}
+
+	<h2>{{ _("Terms and Conditions") }}</h2>
+
+	{{ heading(_("Rent and Payment")) }}
+	<p>{{ _("The Tenant shall pay the rent and charges above on each due date, billed {0}. Invoices may be sent by email or message to the Tenant's contact details above.").format((doc.billing_frequency or "Monthly").lower()) }}</p>
+
+	{{ heading(_("Late Payment")) }}
+	{% if data.late_fee %}
+		<p>
+			{% if data.late_fee.is_percent %}
+				{{ _("If a payment is still unpaid {0} days after its due date, a late fee of {1}% of the rent applies.").format(data.late_fee.grace_days or 0, "%g" | format(data.late_fee.percent)) }}
+			{% else %}
+				{{ _("If a payment is still unpaid {0} days after its due date, a late fee of {1} applies.").format(data.late_fee.grace_days or 0, money(data.late_fee.amount)) }}
+			{% endif %}
+		</p>
+	{% else %}
+		<p>{{ _("Payments must be made by their due date. Overdue amounts remain owed by the Tenant until paid in full.") }}</p>
+	{% endif %}
+
+	{{ heading(_("Security Deposit")) }}
+	<p>{{ _("The Landlord holds the security deposit for the length of this agreement. After move-out, the Landlord may deduct unpaid amounts and the cost of damage beyond normal wear and tear, and shall refund the balance to the Tenant. If deductions exceed the deposit, the Tenant shall pay the difference.") }}</p>
+
+	{{ heading(_("Utilities")) }}
+	<p>{{ _("Metered utilities used at the premises are charged to the Tenant according to meter readings, and are added to the Tenant's invoice.") }}</p>
+
+	{{ heading(_("Use of the Premises")) }}
+	<p>{{ _("The Tenant shall use the premises only for lawful purposes, shall not cause a nuisance to others, and shall follow the rules of the property.") }}</p>
+
+	{{ heading(_("Condition and Maintenance")) }}
+	<p>{{ _("The condition of the premises is recorded in a checklist at move-in and again at move-out. The Tenant shall keep the premises clean and in good condition, and report any damage or needed repair promptly.") }}</p>
+
+	{{ heading(_("Alterations and Subletting")) }}
+	<p>{{ _("The Tenant shall not alter the premises, sublet them or transfer this agreement without the Landlord's written consent.") }}</p>
+
+	{{ heading(_("End of Lease and Renewal")) }}
+	<p>{{ _("This agreement ends on the end date above unless renewed in writing. On leaving, the Tenant shall return the premises and all keys in the condition recorded at move-in, apart from normal wear and tear.") }}</p>
+
+	<div class="keep">
+		<h2>{{ _("Signatures") }}</h2>
+		<p>{{ _("By signing below, both parties agree to the terms of this agreement.") }}</p>
+		<table class="signatures"><tbody>
+			<tr>
+				<td>
+					<div class="sign-line"></div>
+					<b>{{ _("Landlord") }}:</b> {{ landlord_name | e }}<br>
+					{{ _("Date") }}: ____________________
+				</td>
+				<td>
+					<div class="sign-line"></div>
+					<b>{{ _("Tenant") }}:</b> {{ data.tenant.full_name | e }}<br>
+					{{ _("Date") }}: ____________________
+				</td>
+			</tr>
+		</tbody></table>
+		{% if doc.esign_status == "Signed" %}
+			<p>{{ _("Signed electronically.") }}{% if doc.esign_request_id %} {{ _("Request ID") }}: {{ doc.esign_request_id | e }}{% endif %}</p>
+		{% endif %}
+	</div>
+
+	{% if doc.rent_schedule %}
+		<h2 class="annexure">{{ _("Annexure: Payment Schedule") }}</h2>
+		<table class="grid">
+			<thead><tr>
+				<th>{{ _("Due Date") }}</th>
+				<th>{{ _("Period") }}</th>
+				<th class="num">{{ _("Rent") }}</th>
+				<th class="num">{{ _("Charges") }}</th>
+				<th class="num">{{ _("Discount") }}</th>
+				<th class="num">{{ _("Total") }}</th>
+			</tr></thead>
+			<tbody>
+				{% for row in doc.rent_schedule %}
+					<tr>
+						<td>{{ date(row.due_date) }}</td>
+						<td>{{ (row.billing_period or "") | e }}</td>
+						<td class="num">{{ money(row.rent_amount) }}</td>
+						<td class="num">{{ money(row.charges_amount) }}</td>
+						<td class="num">{{ money(row.discount_amount) }}</td>
+						<td class="num">{{ money(row.total_amount) }}</td>
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	{% endif %}
+</div>

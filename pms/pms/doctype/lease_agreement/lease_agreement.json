@@ -4,6 +4,7 @@
  "autoname": "naming_series:",
  "creation": "2026-06-23 15:05:43.272223",
  "doctype": "DocType",
+ "default_print_format": "Lease Agreement Contract",
  "engine": "InnoDB",
  "field_order": [
   "tenant",
@@ -369,7 +370,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-19 17:15:43.589957",
+ "modified": "2026-11-04 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "pms",
  "name": "Lease Agreement",
